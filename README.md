@@ -55,7 +55,7 @@ Edge Function `publish-site` (is_admin check) ──Vercel deploy hook──▶ 
 4. **Publish function** — deploy it and give it the hook:
    ```bash
    npx supabase login
-   npx supabase functions deploy publish-site --project-ref <ref>
+   npx supabase functions deploy publish-site --no-verify-jwt --project-ref <ref>
    npx supabase secrets set VERCEL_DEPLOY_HOOK_URL=<deploy hook url> --project-ref <ref>
    ```
    *Hostinger instead:* set `GITHUB_TOKEN` (fine-grained, this repo only, **Contents: Read and write**) and

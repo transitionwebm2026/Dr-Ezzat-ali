@@ -12,7 +12,9 @@
  *   GITHUB_REPO             owner/repo, e.g. transitionwebm2026/Dr-Ezzat-ali
  * SUPABASE_URL / SUPABASE_ANON_KEY are provided by the Edge runtime.
  *
- * Deploy: supabase functions deploy publish-site
+ * Deploy: supabase functions deploy publish-site --no-verify-jwt
+ *   The gateway JWT check does not support the project's asymmetric (ES256) signing keys; the is_admin()
+ *   call below already rejects missing (401), anonymous and invalid (403) tokens.
  */
 import { createClient } from 'npm:@supabase/supabase-js@2.117.2';
 
