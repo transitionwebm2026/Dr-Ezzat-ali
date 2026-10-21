@@ -2,12 +2,14 @@
  * publish-site — the static site's "on-demand revalidation".
  *
  * Called by the admin dashboard after a save. It verifies the caller is a CMS admin (public.is_admin()
- * evaluated with the caller's own JWT), then fires a `repository_dispatch` event so GitHub Actions
- * rebuilds the static export from the latest Supabase content and uploads it to Hostinger.
+ * evaluated with the caller's own JWT), then starts a rebuild of the static export from the latest
+ * Supabase content: a Vercel deploy hook, or else a `repository_dispatch` for the GitHub Actions
+ * workflow that uploads to Hostinger.
  *
- * Secrets (supabase secrets set …):
- *   GITHUB_TOKEN  fine-grained PAT, this repository only, permission "Contents: Read and write"
- *   GITHUB_REPO   owner/repo, e.g. transitionwebm2026/Dr-Ezzat-ali
+ * Secrets (supabase secrets set …) — one of:
+ *   VERCEL_DEPLOY_HOOK_URL  Vercel → Project → Settings → Git → Deploy Hooks (branch: main)
+ *   GITHUB_TOKEN            fine-grained PAT, this repository only, permission "Contents: Read and write"
+ *   GITHUB_REPO             owner/repo, e.g. transitionwebm2026/Dr-Ezzat-ali
  * SUPABASE_URL / SUPABASE_ANON_KEY are provided by the Edge runtime.
  *
  * Deploy: supabase functions deploy publish-site
@@ -39,9 +41,19 @@ Deno.serve(async (req) => {
   const { data: isAdmin, error: adminError } = await supabase.rpc('is_admin');
   if (adminError || isAdmin !== true) return json({ error: 'Admins only' }, 403);
 
+  const vercelHook = Deno.env.get('VERCEL_DEPLOY_HOOK_URL');
+  if (vercelHook) {
+    const response = await fetch(vercelHook, { method: 'POST' });
+    if (!response.ok) {
+      console.error('Vercel deploy hook failed', response.status, await response.text());
+      return json({ error: `Vercel rejected the publish request (${response.status})` }, 502);
+    }
+    return json({ ok: true, message: 'Build started — the site updates in ~1–3 minutes.' }, 202);
+  }
+
   const token = Deno.env.get('GITHUB_TOKEN');
   const repo = Deno.env.get('GITHUB_REPO');
-  if (!token || !repo) return json({ error: 'GITHUB_TOKEN / GITHUB_REPO secrets are not set on the publish-site function' }, 500);
+  if (!token || !repo) return json({ error: 'Set VERCEL_DEPLOY_HOOK_URL (or GITHUB_TOKEN / GITHUB_REPO) on the publish-site function' }, 500);
 
   const response = await fetch(`https://api.github.com/repos/${repo}/dispatches`, {
     method: 'POST',

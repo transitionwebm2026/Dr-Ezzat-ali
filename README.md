@@ -16,15 +16,17 @@ npm run typecheck
 
 ## Content management (Supabase CMS + `/admin`)
 
-The site stays a **static export** (plain HTML on Hostinger shared hosting); its content lives in **Supabase**.
+The site stays a **static export** (hosted on **Vercel**; Hostinger via FTP is the alternative); its content
+lives in **Supabase**. Pages only change when the site is rebuilt, so every dashboard save asks for a rebuild:
 
 ```
 /admin (static client app) ──supabase-js + admin JWT──▶ Supabase (Postgres + RLS, Auth, Storage)
         │ every save                                          ▲
         ▼                                                     │ public key, published rows only
-Edge Function `publish-site` (is_admin check) ──repository_dispatch──▶ GitHub Actions:
+Edge Function `publish-site` (is_admin check) ──Vercel deploy hook──▶ Vercel:
         npm run build  (scripts/cms-pull.mjs → src/content/cms-snapshot.json → next build)
-        → FTP upload of /out to public_html                    ≈ 2–4 minutes after the save
+                                                               ≈ 1–3 minutes after the save
+   (Hostinger alternative: repository_dispatch → GitHub Actions build → FTP upload of /out)
 ```
 
 - **Security:** RLS on every table. Visitors (anon key) can only `SELECT` published/active rows and `INSERT` a
@@ -47,15 +49,19 @@ Edge Function `publish-site` (is_admin check) ──repository_dispatch──▶
 2. **Auth** — Authentication → Sign In / Providers: turn **off** "Allow new users to sign up".
    Create the admin: `$env:ADMIN_PASSWORD='…'; npm run cms:create-admin` (needs `SUPABASE_SERVICE_ROLE_KEY` in
    `.env.local`), or Authentication → Users → Add user (auto-confirm), then re-run the last statement of the migration.
-3. **Publish function** — GitHub → Settings → Developer settings → fine-grained token for this repo only with
-   **Contents: Read and write**. Then:
+3. **Vercel** — Project → Settings → Environment Variables: `NEXT_PUBLIC_SUPABASE_URL`,
+   `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` (a Vercel build fails without them rather than publishing placeholders).
+   Then Settings → Git → **Deploy Hooks** → create one for branch `main` and copy its URL.
+4. **Publish function** — deploy it and give it the hook:
    ```bash
+   npx supabase login
    npx supabase functions deploy publish-site --project-ref <ref>
-   npx supabase secrets set GITHUB_TOKEN=<token> GITHUB_REPO=<owner>/<repo> --project-ref <ref>
+   npx supabase secrets set VERCEL_DEPLOY_HOOK_URL=<deploy hook url> --project-ref <ref>
    ```
-4. **GitHub Actions secrets** — `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`, `FTP_SERVER`,
-   `FTP_USERNAME`, `FTP_PASSWORD` (hPanel → Files → FTP Accounts). If your FTP login lands directly inside
-   `public_html`, add the repository **variable** `FTP_SERVER_DIR` = `./`.
+   *Hostinger instead:* set `GITHUB_TOKEN` (fine-grained, this repo only, **Contents: Read and write**) and
+   `GITHUB_REPO=<owner>/<repo>` instead of the hook, and add the GitHub Actions secrets
+   `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`, `FTP_SERVER`, `FTP_USERNAME`, `FTP_PASSWORD`
+   (hPanel → Files → FTP Accounts; if the FTP login lands inside `public_html`, add the variable `FTP_SERVER_DIR` = `./`).
 
 | Dashboard page            | Table(s)                             |
 | ------------------------- | ------------------------------------ |
@@ -70,7 +76,8 @@ Edge Function `publish-site` (is_admin check) ──repository_dispatch──▶
 
 ## Deploy to Hostinger
 
-Automatic: every push to `main` and every CMS save runs `.github/workflows/deploy.yml`.
+Only when `publish-site` is configured with `GITHUB_TOKEN` (CMS saves) or from GitHub → Actions → **Run workflow**:
+`.github/workflows/deploy.yml` builds and uploads over FTP. (It no longer runs on push, since the site is on Vercel.)
 
 Manual alternative:
 

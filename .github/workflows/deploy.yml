@@ -1,8 +1,11 @@
 # Builds the static site from the latest Supabase content and uploads it to Hostinger (public_html).
 #
+# The live site is hosted on Vercel (it rebuilds on every push to main, and the `publish-site` Edge Function
+# calls its deploy hook after CMS saves). This workflow is the alternative for Hostinger, so it no longer
+# runs on push — add `push: branches: [main]` back under `on:` to deploy there automatically.
+#
 # Triggers
-#   • repository_dispatch "cms-publish" — sent by the `publish-site` Edge Function after every CMS save
-#   • push to main                      — code changes
+#   • repository_dispatch "cms-publish" — sent by `publish-site` when it is configured with GITHUB_TOKEN instead
 #   • workflow_dispatch                 — "Run workflow" button in GitHub → Actions
 #
 # Repository secrets (Settings → Secrets and variables → Actions):
@@ -18,8 +21,6 @@ name: Build & deploy to Hostinger
 on:
   repository_dispatch:
     types: [cms-publish]
-  push:
-    branches: [main]
   workflow_dispatch:
 
 # One deploy at a time. A burst of CMS saves collapses into: the running build + one queued build

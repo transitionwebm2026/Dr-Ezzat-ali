@@ -20,7 +20,9 @@ import { createClient } from '@supabase/supabase-js';
 const outFile = fileURLToPath(new URL('../src/content/cms-snapshot.json', import.meta.url));
 const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const key = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-const required = process.env.CMS_REQUIRED === '1';
+// Vercel builds are production too: a missing key or a Supabase outage fails the deploy (the previous
+// one stays live) instead of silently publishing the repository defaults.
+const required = process.env.CMS_REQUIRED === '1' || process.env.VERCEL === '1';
 
 async function save(snapshot) {
   await mkdir(dirname(outFile), { recursive: true });
