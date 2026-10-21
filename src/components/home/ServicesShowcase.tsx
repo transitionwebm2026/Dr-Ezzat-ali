@@ -10,7 +10,7 @@ type ShowcaseContent = {
   title: string;
   subtitle: string;
   cta: string;
-  items: { id: string; tag: string; title: string; description: string }[];
+  items: { id: string; tag: string; title: string; description: string; image?: string }[];
 };
 
 /** Maps a card id to the matching deep-dive section on the services page (if any). */
@@ -49,6 +49,7 @@ export function ServicesShowcase({ locale, content, cardCta, tone = 'white', id 
                   tag={item.tag}
                   title={item.title}
                   description={item.description}
+                  image={item.image}
                   cta={cardCta}
                   href={anchor ? localePath(locale, `${pagePaths.services}#${anchor}`) : servicesHref}
                 />

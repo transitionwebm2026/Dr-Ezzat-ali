@@ -96,5 +96,7 @@ export function articleMetadata(locale: Locale, slug: string): Metadata {
 
 /** Static params for article detail pages (identical slugs in both languages). */
 export function articleParams(): { slug: string }[] {
-  return getDictionary('ar').articles.items.map((article) => ({ slug: article.slug }));
+  const params = getDictionary('ar').articles.items.map((article) => ({ slug: article.slug }));
+  // `output: 'export'` rejects an empty list; the placeholder slug simply renders the 404 page.
+  return params.length ? params : [{ slug: 'none' }];
 }

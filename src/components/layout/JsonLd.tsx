@@ -1,4 +1,4 @@
-import { siteConfig } from '@/config/site';
+import { absoluteUrl, siteConfig } from '@/config/site';
 import { getDictionary, localePath, type Locale } from '@/i18n';
 
 export function JsonLd({ data }: { data: Record<string, unknown> }) {
@@ -23,8 +23,8 @@ export function PhysicianJsonLd({ locale }: { locale: Locale }) {
         name: t.doctor.name,
         description: t.meta.description,
         url: `${siteConfig.url}${localePath(locale, '/')}`,
-        image: `${siteConfig.url}${siteConfig.doctorPortrait}`,
-        logo: `${siteConfig.url}${siteConfig.logo.full.src}`,
+        image: absoluteUrl(siteConfig.doctorPortrait),
+        logo: absoluteUrl(siteConfig.logo.full.src),
         telephone: siteConfig.phone,
         email: siteConfig.email,
         knowsAbout: ['Ophthalmology', 'LASIK', 'SMILE', 'Cataract surgery', 'Retina', 'Glaucoma', 'Keratoconus'],

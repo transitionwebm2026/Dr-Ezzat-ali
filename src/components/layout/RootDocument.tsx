@@ -6,7 +6,19 @@ import { PhysicianJsonLd } from '@/components/layout/JsonLd';
 import { MotionProvider } from '@/components/motion/MotionProvider';
 import { siteConfig } from '@/config/site';
 import { getDictionary, localeMeta, localePath, navOrder, pagePaths, type Locale } from '@/i18n';
+import { cmsNavigation, cmsSiteFlags, type NavLink } from '@/lib/cms/content';
 import { telUrl, whatsappUrl } from '@/lib/contact';
+
+function toNavItem(locale: Locale, link: NavLink): NavItem {
+  return {
+    key: link.key,
+    label: link.label,
+    href: link.external ? link.path : localePath(locale, link.path),
+    path: link.path,
+    external: link.external,
+    children: link.children.map((child) => toNavItem(locale, child)),
+  };
+}
 
 type RootDocumentProps = {
   locale: Locale;
@@ -25,12 +37,14 @@ export function RootDocument({ locale, fontClassName, children }: RootDocumentPr
   const whatsappHref = whatsappUrl(t.whatsapp.defaultMessage);
   const telHref = telUrl();
 
-  const navItems: NavItem[] = navOrder.map((key) => ({
-    key,
-    label: t.nav[key],
-    href: localePath(locale, pagePaths[key]),
-    path: pagePaths[key],
-  }));
+  const navItems: NavItem[] =
+    cmsNavigation(locale)?.map((link) => toNavItem(locale, link)) ??
+    navOrder.map((key) => ({
+      key,
+      label: t.nav[key],
+      href: localePath(locale, pagePaths[key]),
+      path: pagePaths[key],
+    }));
 
   return (
     <html lang={htmlLang} dir={dir} className={fontClassName} data-scroll-behavior="smooth">
@@ -47,6 +61,7 @@ export function RootDocument({ locale, fontClassName, children }: RootDocumentPr
             items={navItems}
             homeHref={localePath(locale, '/')}
             bookHref={localePath(locale, pagePaths.contact)}
+            showBook={cmsSiteFlags.showBookCta}
             whatsappHref={whatsappHref}
             telHref={telHref}
             phoneDisplay={siteConfig.phoneDisplay}

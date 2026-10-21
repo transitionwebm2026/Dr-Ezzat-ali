@@ -9,7 +9,7 @@ type HeroPortraitProps = {
   className?: string;
 };
 
-/** The doctor's portrait, framed by concentric "lens" rings, pulling into focus on load. */
+/** The hero image (the doctor's portrait by default), framed by concentric "lens" rings, pulling into focus on load. */
 export function HeroPortrait({ alt, size = 'lg', className }: HeroPortraitProps) {
   return (
     <div
@@ -35,7 +35,7 @@ export function HeroPortrait({ alt, size = 'lg', className }: HeroPortraitProps)
 
       <div className="relative aspect-[4/5] animate-focus-in">
         <Image
-          src={siteConfig.doctorPortrait}
+          src={siteConfig.heroImage}
           alt={alt}
           fill
           preload

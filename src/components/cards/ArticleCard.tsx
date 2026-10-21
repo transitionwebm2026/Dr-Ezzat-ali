@@ -14,6 +14,8 @@ export type ArticleSummary = {
   excerpt: string;
   readTime: number;
   date: string;
+  /** Cover photo uploaded in the CMS (replaces the illustration). */
+  image?: string;
 };
 
 type ArticleLabels = { minRead: string; readArticle: string };
@@ -39,7 +41,13 @@ export function ArticleCard({ article, href, locale, labels }: { article: Articl
 
   return (
     <article className="card card-hover group flex h-full flex-col overflow-hidden p-2">
-      <OpticArt tone={visual.tone} icon={visual.icon} image={visual.image} imageAlt={article.title} className="aspect-[16/10] rounded-[1.25rem]">
+      <OpticArt
+        tone={visual.tone}
+        icon={visual.icon}
+        image={article.image ?? visual.image}
+        imageAlt={article.title}
+        className="aspect-[16/10] rounded-[1.25rem]"
+      >
         <span className="absolute bottom-4 start-4 rounded-full bg-white/90 px-3 py-1 text-xs font-bold text-secondary-700 shadow-sm backdrop-blur">
           {article.category}
         </span>
@@ -79,7 +87,7 @@ export function FeaturedArticleCard({
       <OpticArt
         tone={visual.tone}
         icon={visual.icon}
-        image={visual.image}
+        image={article.image ?? visual.image}
         imageAlt={article.title}
         iconSize="lg"
         focal="center"

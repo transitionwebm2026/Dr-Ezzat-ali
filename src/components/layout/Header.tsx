@@ -1,10 +1,10 @@
 'use client';
 
 import { AnimatePresence, motion } from 'framer-motion';
-import { CalendarCheck, Menu, Phone, X } from 'lucide-react';
+import { CalendarCheck, ChevronDown, Menu, Phone, X } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { BrandIcon } from '@/components/icons/BrandIcon';
 import { ArrowForward } from '@/components/icons/registry';
 import { ButtonLink } from '@/components/ui/Button';
@@ -13,13 +13,42 @@ import { Logo } from '@/components/ui/Logo';
 import { localeMeta, locales, stripLocale, switchLocalePath, type Locale } from '@/i18n/config';
 import { cn } from '@/lib/cn';
 
-export type NavItem = { key: string; label: string; href: string; path: string };
+export type NavItem = {
+  key: string;
+  label: string;
+  href: string;
+  /** Path without locale prefix, used for the active state. */
+  path: string;
+  /** Absolute URL to another site — opens in a new tab and is never "active". */
+  external?: boolean;
+  /** Dropdown links (managed in the CMS navigation menu). */
+  children?: NavItem[];
+};
+
+type NavAnchorProps = { item: NavItem; current?: boolean; className?: string; onClick?: () => void; children: ReactNode };
+
+function NavAnchor({ item, current, className, onClick, children }: NavAnchorProps) {
+  if (item.external) {
+    return (
+      <a href={item.href} target="_blank" rel="noopener noreferrer" onClick={onClick} className={className}>
+        {children}
+      </a>
+    );
+  }
+  return (
+    <Link href={item.href} onClick={onClick} aria-current={current ? 'page' : undefined} className={className}>
+      {children}
+    </Link>
+  );
+}
 
 type HeaderProps = {
   locale: Locale;
   items: NavItem[];
   homeHref: string;
   bookHref: string;
+  /** "Book appointment" button in the navbar (toggled from the CMS). */
+  showBook?: boolean;
   whatsappHref: string;
   telHref: string;
   phoneDisplay: string;
@@ -34,7 +63,7 @@ type HeaderProps = {
   };
 };
 
-export function Header({ locale, items, homeHref, bookHref, whatsappHref, telHref, phoneDisplay, doctor, labels }: HeaderProps) {
+export function Header({ locale, items, homeHref, bookHref, showBook = true, whatsappHref, telHref, phoneDisplay, doctor, labels }: HeaderProps) {
   const pathname = usePathname() || '/';
   const current = stripLocale(pathname);
   const otherLocale: Locale = locale === 'ar' ? 'en' : 'ar';
@@ -78,7 +107,8 @@ export function Header({ locale, items, homeHref, bookHref, whatsappHref, telHre
     };
   }, [open]);
 
-  const isActive = (path: string) => (path === '/' ? current === '/' : current.startsWith(path));
+  const matches = (item: NavItem) => !item.external && (item.path === '/' ? current === '/' : current.startsWith(item.path));
+  const isActive = (item: NavItem): boolean => matches(item) || Boolean(item.children?.some(matches));
   const offscreen = localeMeta[locale].dir === 'rtl' ? '-100%' : '100%';
 
   return (
@@ -97,12 +127,13 @@ export function Header({ locale, items, homeHref, bookHref, whatsappHref, telHre
           <nav aria-label="Main" className="hidden xl:block">
             <ul className="flex items-center gap-0.5">
               {items.map((item) => {
-                const active = isActive(item.path);
+                const active = isActive(item);
+                const dropdown = Boolean(item.children?.length);
                 return (
-                  <li key={item.key}>
-                    <Link
-                      href={item.href}
-                      aria-current={active ? 'page' : undefined}
+                  <li key={item.key} className={cn(dropdown && 'group/dd relative')}>
+                    <NavAnchor
+                      item={item}
+                      current={matches(item)}
                       className={cn(
                         'relative block rounded-full px-3.5 py-2 font-heading text-[0.92rem] font-bold transition-colors duration-300',
                         active ? 'text-white' : 'text-secondary-700 hover:text-primary-600',
@@ -115,8 +146,31 @@ export function Header({ locale, items, homeHref, bookHref, whatsappHref, telHre
                           transition={{ type: 'spring', stiffness: 380, damping: 32 }}
                         />
                       )}
-                      <span className="relative">{item.label}</span>
-                    </Link>
+                      <span className="relative inline-flex items-center gap-1">
+                        {item.label}
+                        {dropdown && <ChevronDown aria-hidden className="size-3.5 transition-transform duration-300 group-hover/dd:rotate-180" />}
+                      </span>
+                    </NavAnchor>
+                    {dropdown && (
+                      <div className="invisible absolute start-0 top-full z-10 pt-2 opacity-0 transition-all duration-200 group-focus-within/dd:visible group-focus-within/dd:opacity-100 group-hover/dd:visible group-hover/dd:opacity-100">
+                        <ul className="min-w-56 rounded-2xl border border-slate-100 bg-white p-2 shadow-elevated">
+                          {item.children!.map((child) => (
+                            <li key={child.key}>
+                              <NavAnchor
+                                item={child}
+                                current={matches(child)}
+                                className={cn(
+                                  'block rounded-xl px-4 py-2.5 font-heading text-sm font-bold transition-colors',
+                                  matches(child) ? 'bg-primary-50 text-primary-700' : 'text-secondary-700 hover:bg-primary-50 hover:text-primary-600',
+                                )}
+                              >
+                                {child.label}
+                              </NavAnchor>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
                   </li>
                 );
               })}
@@ -155,10 +209,12 @@ export function Header({ locale, items, homeHref, bookHref, whatsappHref, telHre
                 </span>
               ))}
             </a>
-            <ButtonLink href={bookHref} size="sm" className="hidden md:inline-flex">
-              <CalendarCheck aria-hidden className="size-4" />
-              {labels.book}
-            </ButtonLink>
+            {showBook && (
+              <ButtonLink href={bookHref} size="sm" className="hidden md:inline-flex">
+                <CalendarCheck aria-hidden className="size-4" />
+                {labels.book}
+              </ButtonLink>
+            )}
             <button
               type="button"
               onClick={() => setOpenedOn(open ? null : pathname)}
@@ -211,7 +267,7 @@ export function Header({ locale, items, homeHref, bookHref, whatsappHref, telHre
               <nav aria-label="Mobile" className="flex-1 p-4">
                 <ul className="space-y-1.5">
                   {items.map((item, index) => {
-                    const active = isActive(item.path);
+                    const active = matches(item);
                     return (
                       <motion.li
                         key={item.key}
@@ -219,10 +275,10 @@ export function Header({ locale, items, homeHref, bookHref, whatsappHref, telHre
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: 0.06 + index * 0.04, duration: 0.4 }}
                       >
-                        <Link
-                          href={item.href}
+                        <NavAnchor
+                          item={item}
+                          current={active}
                           onClick={close}
-                          aria-current={active ? 'page' : undefined}
                           className={cn(
                             'flex items-center justify-between rounded-2xl px-4 py-3.5 font-heading text-lg font-bold transition-all duration-300',
                             active ? 'bg-brand-gradient text-white shadow-glow' : 'text-secondary-700 hover:bg-primary-50',
@@ -235,7 +291,26 @@ export function Header({ locale, items, homeHref, bookHref, whatsappHref, telHre
                             {item.label}
                           </span>
                           <ArrowForward className={cn('size-4', active ? 'text-white' : 'text-primary-400')} />
-                        </Link>
+                        </NavAnchor>
+                        {item.children?.length ? (
+                          <ul className="mt-1 space-y-1 border-primary-100 ps-6 ltr:ml-4 ltr:border-l-2 rtl:mr-4 rtl:border-r-2">
+                            {item.children.map((child) => (
+                              <li key={child.key}>
+                                <NavAnchor
+                                  item={child}
+                                  current={matches(child)}
+                                  onClick={close}
+                                  className={cn(
+                                    'block rounded-xl px-4 py-2.5 font-heading text-base font-bold transition-colors',
+                                    matches(child) ? 'bg-primary-50 text-primary-700' : 'text-secondary-600 hover:bg-primary-50',
+                                  )}
+                                >
+                                  {child.label}
+                                </NavAnchor>
+                              </li>
+                            ))}
+                          </ul>
+                        ) : null}
                       </motion.li>
                     );
                   })}
@@ -243,10 +318,12 @@ export function Header({ locale, items, homeHref, bookHref, whatsappHref, telHre
               </nav>
 
               <div className="space-y-3 border-t border-slate-100 bg-surface p-4">
-                <ButtonLink href={bookHref} className="w-full">
-                  <CalendarCheck aria-hidden className="size-5" />
-                  {labels.book}
-                </ButtonLink>
+                {showBook && (
+                  <ButtonLink href={bookHref} className="w-full">
+                    <CalendarCheck aria-hidden className="size-5" />
+                    {labels.book}
+                  </ButtonLink>
+                )}
                 <div className="grid grid-cols-2 gap-3">
                   <ButtonLink href={whatsappHref} variant="whatsapp" size="sm">
                     <BrandIcon name="whatsapp" className="size-4" />

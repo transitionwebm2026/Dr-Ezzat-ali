@@ -874,7 +874,7 @@ const en: Dictionary = {
       notes: 'Additional notes (optional)',
       notesPlaceholder: 'Briefly describe your concern…',
       submit: 'Send via WhatsApp',
-      privacy: 'Your details are sent directly to the clinic via WhatsApp and are never stored on this website.',
+      privacy: 'Your details are sent to the clinic via WhatsApp and stored securely, only to follow up on your request.',
       errors: {
         name: 'Please enter your name (at least 2 characters).',
         phone: 'Please enter a valid phone number.',
@@ -899,6 +899,7 @@ const en: Dictionary = {
       title: 'Visit Our Clinic',
       address: 'Address',
       phones: 'Phone',
+      emergency: 'Emergencies',
       email: 'Email',
       hours: 'Opening hours',
       directions: 'Get directions',

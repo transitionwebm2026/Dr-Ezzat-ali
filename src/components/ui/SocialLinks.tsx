@@ -5,11 +5,14 @@ import { cn } from '@/lib/cn';
 type SocialLinksProps = {
   theme?: 'light' | 'dark';
   size?: 'sm' | 'md';
+  /** Networks to leave out here (e.g. hidden from the footer in the CMS). */
+  exclude?: SocialNetwork[];
   className?: string;
 };
 
-export function SocialLinks({ theme = 'light', size = 'md', className }: SocialLinksProps) {
-  const entries = Object.entries(siteConfig.social) as [SocialNetwork, string][];
+export function SocialLinks({ theme = 'light', size = 'md', exclude, className }: SocialLinksProps) {
+  const entries = (Object.entries(siteConfig.social) as [SocialNetwork, string][]).filter(([network]) => !exclude?.includes(network));
+  if (!entries.length) return null;
   return (
     <ul className={cn('flex items-center gap-2', className)}>
       {entries.map(([network, href]) => (

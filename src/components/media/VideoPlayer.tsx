@@ -7,8 +7,10 @@ import { cn } from '@/lib/cn';
 type VideoPlayerProps = {
   title: string;
   youtubeId?: string;
-  /** Self-hosted MP4 path, e.g. '/videos/intro.mp4'. */
+  /** Self-hosted MP4 path, e.g. '/videos/intro.mp4', or a CMS upload URL. */
   src?: string;
+  /** Thumbnail shown by the <video> element while the file loads. */
+  poster?: string;
   /** vertical 9:16 · landscape 16:9 · cinema 16:9 on mobile → 21:9 on desktop */
   aspect: 'vertical' | 'landscape' | 'cinema';
   playLabel: string;
@@ -22,7 +24,7 @@ type VideoPlayerProps = {
  * Click-to-load video facade: no third-party iframe is loaded until the visitor asks for it,
  * which keeps pages fast and privacy-friendly (youtube-nocookie).
  */
-export function VideoPlayer({ title, youtubeId, src, aspect, playLabel, soonLabel, className, children }: VideoPlayerProps) {
+export function VideoPlayer({ title, youtubeId, src, poster, aspect, playLabel, soonLabel, className, children }: VideoPlayerProps) {
   const [playing, setPlaying] = useState(false);
   const playable = Boolean(youtubeId || src);
 
@@ -44,7 +46,7 @@ export function VideoPlayer({ title, youtubeId, src, aspect, playLabel, soonLabe
             className="absolute inset-0 size-full border-0"
           />
         ) : (
-          <video src={src} title={title} controls autoPlay playsInline className="absolute inset-0 size-full bg-black object-cover" />
+          <video src={src} poster={poster} title={title} controls autoPlay playsInline className="absolute inset-0 size-full bg-black object-cover" />
         )
       ) : (
         <>

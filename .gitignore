@@ -10,4 +10,14 @@ next-env.d.ts
 # misc
 .DS_Store
 *.log
+
+# secrets — never commit (see .env.example)
+.env
 .env*.local
+
+# CMS snapshot, regenerated from Supabase before every dev/build (scripts/cms-pull.mjs)
+src/content/cms-snapshot.json
+
+# Supabase CLI
+supabase/.temp/
+supabase/.branches/

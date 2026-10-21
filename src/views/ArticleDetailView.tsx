@@ -1,5 +1,5 @@
 import { CalendarDays, Clock, Lightbulb, ShieldAlert } from 'lucide-react';
-import { ArticleCard } from '@/components/cards/ArticleCard';
+import { ArticleCard, type ArticleSummary } from '@/components/cards/ArticleCard';
 import { PageCTA } from '@/components/cta/PageCTA';
 import { pageCrumbs } from '@/components/hero/HeroActions';
 import { BrandIcon } from '@/components/icons/BrandIcon';
@@ -14,11 +14,14 @@ import { OpticArt } from '@/components/ui/OpticArt';
 import { SectionHeading } from '@/components/ui/SectionHeading';
 import { siteConfig } from '@/config/site';
 import { getArticleVisual } from '@/content/media';
-import { getDictionary, localePath, pagePaths, type Locale } from '@/i18n';
+import { getDictionary, localePath, pagePaths, type Dictionary, type Locale } from '@/i18n';
 import { whatsappUrl } from '@/lib/contact';
 import { formatDate } from '@/lib/format';
 
-export function getArticle(locale: Locale, slug: string) {
+/** Dictionary article + the optional cover photo uploaded in the CMS. */
+type Article = Dictionary['articles']['items'][number] & Pick<ArticleSummary, 'image'>;
+
+export function getArticle(locale: Locale, slug: string): Article | undefined {
   return getDictionary(locale).articles.items.find((article) => article.slug === slug);
 }
 
@@ -80,7 +83,7 @@ export function ArticleDetailView({ locale, slug }: { locale: Locale; slug: stri
           <OpticArt
             tone={visual.tone}
             icon={visual.icon}
-            image={visual.image}
+            image={article.image ?? visual.image}
             imageAlt={article.title}
             iconSize="lg"
             focal="center"
@@ -99,33 +102,35 @@ export function ArticleDetailView({ locale, slug }: { locale: Locale; slug: stri
             </p>
           </Reveal>
           <div className="mt-10 space-y-6 text-base leading-loose text-slate-600 sm:text-lg">
-            {article.body.map((paragraph) => (
-              <Reveal key={paragraph} y={16}>
+            {article.body.map((paragraph, index) => (
+              <Reveal key={index} y={16}>
                 <p>{paragraph}</p>
               </Reveal>
             ))}
           </div>
 
-          <Reveal className="mt-12">
-            <aside className="relative overflow-hidden rounded-3xl border border-primary-100 bg-gradient-to-br from-primary-50 via-white to-surface-tint p-7 sm:p-8">
-              <h2 className="flex items-center gap-3 text-xl">
-                <span className="grid size-10 place-items-center rounded-xl bg-brand-gradient text-white shadow-glow">
-                  <Lightbulb aria-hidden className="size-5" />
-                </span>
-                {t.common.keyTakeaways}
-              </h2>
-              <ul className="mt-6 space-y-3">
-                {article.takeaways.map((takeaway, i) => (
-                  <li key={takeaway} className="flex items-start gap-3 font-medium text-secondary-700">
-                    <span dir="ltr" className="mt-0.5 grid size-7 shrink-0 place-items-center rounded-full bg-white font-heading text-xs font-bold text-primary-600 shadow-sm ring-1 ring-primary-100">
-                      {i + 1}
-                    </span>
-                    {takeaway}
-                  </li>
-                ))}
-              </ul>
-            </aside>
-          </Reveal>
+          {article.takeaways.length > 0 && (
+            <Reveal className="mt-12">
+              <aside className="relative overflow-hidden rounded-3xl border border-primary-100 bg-gradient-to-br from-primary-50 via-white to-surface-tint p-7 sm:p-8">
+                <h2 className="flex items-center gap-3 text-xl">
+                  <span className="grid size-10 place-items-center rounded-xl bg-brand-gradient text-white shadow-glow">
+                    <Lightbulb aria-hidden className="size-5" />
+                  </span>
+                  {t.common.keyTakeaways}
+                </h2>
+                <ul className="mt-6 space-y-3">
+                  {article.takeaways.map((takeaway, i) => (
+                    <li key={i} className="flex items-start gap-3 font-medium text-secondary-700">
+                      <span dir="ltr" className="mt-0.5 grid size-7 shrink-0 place-items-center rounded-full bg-white font-heading text-xs font-bold text-primary-600 shadow-sm ring-1 ring-primary-100">
+                        {i + 1}
+                      </span>
+                      {takeaway}
+                    </li>
+                  ))}
+                </ul>
+              </aside>
+            </Reveal>
+          )}
 
           <p className="mt-8 flex items-start gap-2 text-sm text-slate-400">
             <ShieldAlert aria-hidden className="mt-0.5 size-4 shrink-0" />
@@ -146,23 +151,25 @@ export function ArticleDetailView({ locale, slug }: { locale: Locale; slug: stri
       </article>
 
       {/* Related */}
-      <Section tone="surface">
-        <Container>
-          <SectionHeading title={t.common.relatedArticles} />
-          <Stagger className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-            {related.map((item) => (
-              <StaggerItem key={item.slug} className="h-full">
-                <ArticleCard
-                  article={item}
-                  href={hrefFor(item.slug)}
-                  locale={locale}
-                  labels={{ minRead: t.common.minRead, readArticle: t.common.readArticle }}
-                />
-              </StaggerItem>
-            ))}
-          </Stagger>
-        </Container>
-      </Section>
+      {related.length > 0 && (
+        <Section tone="surface">
+          <Container>
+            <SectionHeading title={t.common.relatedArticles} />
+            <Stagger className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+              {related.map((item) => (
+                <StaggerItem key={item.slug} className="h-full">
+                  <ArticleCard
+                    article={item}
+                    href={hrefFor(item.slug)}
+                    locale={locale}
+                    labels={{ minRead: t.common.minRead, readArticle: t.common.readArticle }}
+                  />
+                </StaggerItem>
+              ))}
+            </Stagger>
+          </Container>
+        </Section>
+      )}
 
       <PageCTA locale={locale} title={t.cta.articles.title} subtitle={t.cta.articles.subtitle} />
     </>

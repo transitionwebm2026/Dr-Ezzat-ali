@@ -7,13 +7,72 @@ Bilingual (Arabic RTL default / English LTR) static website built with **Next.js
 
 ```bash
 npm install
-npm run dev        # http://localhost:3000  (Arabic at /, English at /en/)
-npm run build      # static export → /out   (runs scripts/fix-static-export.mjs afterwards)
+cp .env.example .env.local   # Supabase URL + publishable key (optional — without it the repo content is used)
+npm run dev        # http://localhost:3000  (Arabic at /, English at /en/, dashboard at /admin/)
+npm run build      # pulls CMS content → static export → /out (then runs scripts/fix-static-export.mjs)
 npm run start      # preview /out locally
 npm run typecheck
 ```
 
+## Content management (Supabase CMS + `/admin`)
+
+The site stays a **static export** (plain HTML on Hostinger shared hosting); its content lives in **Supabase**.
+
+```
+/admin (static client app) ──supabase-js + admin JWT──▶ Supabase (Postgres + RLS, Auth, Storage)
+        │ every save                                          ▲
+        ▼                                                     │ public key, published rows only
+Edge Function `publish-site` (is_admin check) ──repository_dispatch──▶ GitHub Actions:
+        npm run build  (scripts/cms-pull.mjs → src/content/cms-snapshot.json → next build)
+        → FTP upload of /out to public_html                    ≈ 2–4 minutes after the save
+```
+
+- **Security:** RLS on every table. Visitors (anon key) can only `SELECT` published/active rows and `INSERT` a
+  consultation request. Writes require a signed-in user listed in `public.admin_users` (`public.is_admin()`), so
+  signing up grants nothing. Storage buckets `site-images` / `site-videos` are public-read, admin-only write.
+  The `/admin` route guard is client-side (a static host has no middleware) — RLS is the real boundary.
+- **No server-side secrets in the site:** the build and the browser only use the publishable key. The service-role
+  key is used by `npm run cms:create-admin` on a trusted machine only.
+- **Fallbacks:** anything left empty in the CMS falls back to `src/config/site.ts` / the dictionaries. Page-section
+  overrides are coerced into the dictionary's shape, so a bad row can't break a page. Without Supabase env vars the
+  site builds from the repository content as before.
+- **Home page:** reviews, videos and articles are never duplicated — the home sections show rows flagged
+  `is_featured_on_home` (first 3 videos / articles; all featured reviews).
+
+### One-time setup
+
+1. **Database** — Supabase → SQL Editor: run the files in `supabase/migrations/` in name order
+   (`20261020000000_cms_schema.sql`, then `20261021000000_hero_image_intro_video.sql`), then
+   `supabase/seed.sql` (current site content; regenerate with `npm run cms:seed-sql`). All are re-runnable.
+2. **Auth** — Authentication → Sign In / Providers: turn **off** "Allow new users to sign up".
+   Create the admin: `$env:ADMIN_PASSWORD='…'; npm run cms:create-admin` (needs `SUPABASE_SERVICE_ROLE_KEY` in
+   `.env.local`), or Authentication → Users → Add user (auto-confirm), then re-run the last statement of the migration.
+3. **Publish function** — GitHub → Settings → Developer settings → fine-grained token for this repo only with
+   **Contents: Read and write**. Then:
+   ```bash
+   npx supabase functions deploy publish-site --project-ref <ref>
+   npx supabase secrets set GITHUB_TOKEN=<token> GITHUB_REPO=<owner>/<repo> --project-ref <ref>
+   ```
+4. **GitHub Actions secrets** — `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`, `FTP_SERVER`,
+   `FTP_USERNAME`, `FTP_PASSWORD` (hPanel → Files → FTP Accounts). If your FTP login lands directly inside
+   `public_html`, add the repository **variable** `FTP_SERVER_DIR` = `./`.
+
+| Dashboard page            | Table(s)                             |
+| ------------------------- | ------------------------------------ |
+| الهوية والعنوان والمواعيد  | `site_settings`                      |
+| التواصل والأزرار العائمة   | `site_settings` (phone, WhatsApp…)    |
+| الهيدر وروابط القائمة      | `navigation_menu`, `site_settings`   |
+| الفوتر                    | `footer_settings`, `site_settings`   |
+| صورة الواجهة والفيديو      | `site_settings` (hero image, intro video shared by home & about + thumbnail) |
+| نصوص أقسام الصفحات         | `page_sections` (registry: `src/lib/cms/sections.ts`) |
+| Content libraries         | `surgeries`, `treatments`, `reviews`, `videos`, `articles`, `faqs` |
+| طلبات الحجز               | `consultations` (private, never published) |
+
 ## Deploy to Hostinger
+
+Automatic: every push to `main` and every CMS save runs `.github/workflows/deploy.yml`.
+
+Manual alternative:
 
 1. `npm run build`
 2. In hPanel → **File Manager** → `public_html`, upload the **contents** of `/out` (not the folder itself),
@@ -37,6 +96,9 @@ npm run typecheck
 Each language has its own root layout, so `<html lang dir>` and fonts are baked into the static HTML (no flash).
 
 ## Where to edit content
+
+Once Supabase is connected, edit content in **`/admin`**. The files below hold the **defaults** (used for anything
+left empty in the CMS, and as the schema of the page-section editor).
 
 | What                                              | File |
 | ------------------------------------------------- | ---- |

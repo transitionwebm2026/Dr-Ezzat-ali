@@ -6,13 +6,18 @@ import { Container } from '@/components/ui/Container';
 import { Logo } from '@/components/ui/Logo';
 import { IrisRings } from '@/components/ui/OpticArt';
 import { SocialLinks } from '@/components/ui/SocialLinks';
-import { siteConfig } from '@/config/site';
+import { siteConfig, type SocialNetwork } from '@/config/site';
 import { getDictionary, localePath, navOrder, pagePaths, type Locale } from '@/i18n';
+import { cmsFooterLinks, cmsSiteFlags } from '@/lib/cms/content';
 import { mailUrl, telUrl } from '@/lib/contact';
 
 export function Footer({ locale }: { locale: Locale }) {
   const t = getDictionary(locale);
   const year = new Date().getFullYear();
+  const quickLinks =
+    cmsFooterLinks(locale)?.map((link) => ({ key: link.key, label: link.label, href: link.external ? link.path : localePath(locale, link.path) })) ??
+    navOrder.map((key) => ({ key, label: t.nav[key], href: localePath(locale, pagePaths[key]) }));
+  const hiddenSocial = (Object.keys(cmsSiteFlags.footerSocial) as SocialNetwork[]).filter((network) => cmsSiteFlags.footerSocial[network] === false);
 
   return (
     <footer className="relative isolate overflow-hidden bg-navy-gradient text-secondary-100/75">
@@ -28,36 +33,38 @@ export function Footer({ locale }: { locale: Locale }) {
               <Logo name={t.doctor.name} title={t.doctor.title} theme="dark" />
             </Link>
             <p className="mt-6 max-w-sm text-[0.95rem] leading-relaxed">{t.footer.about}</p>
-            <SocialLinks theme="dark" className="mt-7" />
+            <SocialLinks theme="dark" exclude={hiddenSocial} className="mt-7" />
           </div>
 
-          <div className="lg:col-span-2">
+          <div className={cmsSiteFlags.showFooterSpecialties ? 'lg:col-span-2' : 'lg:col-span-5'}>
             <h2 className="font-heading text-base font-bold text-white">{t.footer.quickLinks}</h2>
             <ul className="mt-5 space-y-3 text-[0.95rem]">
-              {navOrder.map((key) => (
-                <li key={key}>
-                  <Link href={localePath(locale, pagePaths[key])} className="group inline-flex items-center gap-2 transition-colors hover:text-white">
+              {quickLinks.map((link) => (
+                <li key={link.key}>
+                  <Link href={link.href} className="group inline-flex items-center gap-2 transition-colors hover:text-white">
                     <ArrowForward className="size-3.5 text-primary-300 transition-transform duration-300 group-hover:translate-x-0.5 rtl:group-hover:-translate-x-0.5" />
-                    {t.nav[key]}
+                    {link.label}
                   </Link>
                 </li>
               ))}
             </ul>
           </div>
 
-          <div className="lg:col-span-3">
-            <h2 className="font-heading text-base font-bold text-white">{t.footer.specialties}</h2>
-            <ul className="mt-5 space-y-3 text-[0.95rem]">
-              {t.services.specialties.items.map((item) => (
-                <li key={item.id}>
-                  <Link href={localePath(locale, `/services/#${item.id}`)} className="group inline-flex items-center gap-2 transition-colors hover:text-white">
-                    <ArrowForward className="size-3.5 text-primary-300 transition-transform duration-300 group-hover:translate-x-0.5 rtl:group-hover:-translate-x-0.5" />
-                    {item.title}
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          </div>
+          {cmsSiteFlags.showFooterSpecialties && (
+            <div className="lg:col-span-3">
+              <h2 className="font-heading text-base font-bold text-white">{t.footer.specialties}</h2>
+              <ul className="mt-5 space-y-3 text-[0.95rem]">
+                {t.services.specialties.items.map((item) => (
+                  <li key={item.id}>
+                    <Link href={localePath(locale, `/services/#${item.id}`)} className="group inline-flex items-center gap-2 transition-colors hover:text-white">
+                      <ArrowForward className="size-3.5 text-primary-300 transition-transform duration-300 group-hover:translate-x-0.5 rtl:group-hover:-translate-x-0.5" />
+                      {item.title}
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
 
           <div className="lg:col-span-3">
             <h2 className="font-heading text-base font-bold text-white">{t.footer.contactInfo}</h2>

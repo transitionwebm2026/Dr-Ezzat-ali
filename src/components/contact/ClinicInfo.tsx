@@ -55,6 +55,20 @@ export function ClinicInfo({ locale }: { locale: Locale }) {
           <a href={telUrl()} dir="ltr" className="block font-heading font-bold text-secondary-700 hover:text-primary-600 rtl:text-right">
             {siteConfig.phoneDisplay}
           </a>
+          {siteConfig.secondaryPhone && (
+            <a href={telUrl(siteConfig.secondaryPhone)} dir="ltr" className="block font-heading font-bold text-secondary-700 hover:text-primary-600 rtl:text-right">
+              {siteConfig.secondaryPhone}
+            </a>
+          )}
+          {siteConfig.emergency.phone && (
+            <p className="text-sm">
+              <span className="font-bold text-rose-600">{t.contact.info.emergency}: </span>
+              <a href={telUrl(siteConfig.emergency.phone)} dir="ltr" className="font-heading font-bold text-secondary-700 hover:text-primary-600">
+                {siteConfig.emergency.phone}
+              </a>
+              {siteConfig.emergency.note[locale] && <span className="block text-xs text-slate-500">{siteConfig.emergency.note[locale]}</span>}
+            </p>
+          )}
           <a
             href={whatsappUrl(t.whatsapp.defaultMessage)}
             target="_blank"

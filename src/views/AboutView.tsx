@@ -52,8 +52,9 @@ export function AboutView({ locale }: { locale: Locale }) {
               aspect="cinema"
               title={about.video.title}
               label={about.video.label}
-              youtubeId={siteConfig.videos.aboutIntro.youtubeId}
-              src={siteConfig.videos.aboutIntro.src}
+              youtubeId={siteConfig.videos.intro.youtubeId}
+              src={siteConfig.videos.intro.src}
+              poster={siteConfig.videos.intro.poster}
               portraitAlt={t.doctor.portraitAlt}
               labels={{ playVideo: t.common.playVideo, videoSoon: t.common.videoSoon }}
             />

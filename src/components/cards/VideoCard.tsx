@@ -7,24 +7,40 @@ import { videoSources } from '@/content/media';
 
 type VideoLabels = { playVideo: string; videoSoon: string };
 
-export type VideoItem = { id: string; title: string; category: string; duration: string };
+export type VideoItem = {
+  id: string;
+  title: string;
+  category: string;
+  duration: string;
+  /** CMS videos carry their own source + thumbnail; built-in ones are looked up in `videoSources`. */
+  youtubeId?: string;
+  src?: string;
+  poster?: string;
+};
 
 /** Vertical (9:16) video card for shorts / reels. */
 export function VideoCard({ video, labels }: { video: VideoItem; labels: VideoLabels }) {
-  const source = videoSources[video.id] ?? { youtubeId: '', src: '', tone: 'cyan' as const };
+  const builtIn = videoSources[video.id] ?? { youtubeId: '', src: '', tone: 'cyan' as const };
+  const youtubeId = video.youtubeId || builtIn.youtubeId;
+  const src = video.src || builtIn.src;
 
   return (
     <article className="card card-hover group overflow-hidden p-2">
       <VideoPlayer
         aspect="vertical"
         title={video.title}
-        youtubeId={source.youtubeId}
-        src={source.src}
+        youtubeId={youtubeId}
+        src={src}
+        poster={video.poster}
         playLabel={labels.playVideo}
         soonLabel={labels.videoSoon}
         className="rounded-[1.25rem]"
       >
-        <OpticArt fill tone={source.tone} focal="center" />
+        {video.poster ? (
+          <Image src={video.poster} alt="" fill sizes="(min-width: 1024px) 33vw, (min-width: 560px) 50vw, 100vw" className="object-cover" />
+        ) : (
+          <OpticArt fill tone={builtIn.tone} focal="center" />
+        )}
         <div aria-hidden className="absolute inset-x-0 bottom-0 h-2/3 bg-gradient-to-t from-secondary-950/90 via-secondary-950/35 to-transparent" />
         <span className="glass-dark absolute start-3 top-3 rounded-full px-3 py-1 text-[0.7rem] font-bold text-white">{video.category}</span>
         <span className="absolute end-3 top-3 inline-flex items-center gap-1 rounded-full bg-black/30 px-2.5 py-1 text-[0.7rem] font-bold tabular-nums text-white backdrop-blur">
@@ -42,6 +58,8 @@ type FeatureVideoProps = {
   label: string;
   youtubeId?: string;
   src?: string;
+  /** Uploaded thumbnail — replaces the branded doctor poster. */
+  poster?: string;
   portraitAlt: string;
   labels: VideoLabels;
   aspect?: 'landscape' | 'cinema';
@@ -49,7 +67,7 @@ type FeatureVideoProps = {
 };
 
 /** Landscape (16:9 / cinematic 21:9) feature video with a branded poster featuring the doctor. */
-export function FeatureVideo({ title, label, youtubeId, src, portraitAlt, labels, aspect = 'landscape', className }: FeatureVideoProps) {
+export function FeatureVideo({ title, label, youtubeId, src, poster, portraitAlt, labels, aspect = 'landscape', className }: FeatureVideoProps) {
   return (
     <div className={className}>
       <div className="card group overflow-hidden p-2 shadow-elevated">
@@ -58,20 +76,27 @@ export function FeatureVideo({ title, label, youtubeId, src, portraitAlt, labels
           title={title}
           youtubeId={youtubeId}
           src={src}
+          poster={poster}
           playLabel={labels.playVideo}
           soonLabel={labels.videoSoon}
           className="rounded-[1.5rem]"
         >
-          <OpticArt fill tone="navy" />
-          <div className="absolute bottom-0 aspect-[4/5] h-[96%] ltr:right-[4%] rtl:left-[4%]">
-            <Image
-              src={siteConfig.doctorPortrait}
-              alt={portraitAlt}
-              fill
-              sizes="(min-width: 1024px) 320px, 45vw"
-              className="object-contain object-bottom opacity-95 transition-transform duration-700 ease-optical group-hover:scale-[1.03]"
-            />
-          </div>
+          {poster ? (
+            <Image src={poster} alt="" fill sizes="(min-width: 1024px) 1000px, 100vw" className="object-cover" />
+          ) : (
+            <>
+              <OpticArt fill tone="navy" />
+              <div className="absolute bottom-0 aspect-[4/5] h-[96%] ltr:right-[4%] rtl:left-[4%]">
+                <Image
+                  src={siteConfig.doctorPortrait}
+                  alt={portraitAlt}
+                  fill
+                  sizes="(min-width: 1024px) 320px, 45vw"
+                  className="object-contain object-bottom opacity-95 transition-transform duration-700 ease-optical group-hover:scale-[1.03]"
+                />
+              </div>
+            </>
+          )}
           <div aria-hidden className="absolute inset-0 bg-gradient-to-t from-secondary-950/80 via-secondary-950/10 to-transparent" />
           <span className="glass-dark absolute start-4 top-4 rounded-full px-3.5 py-1.5 font-heading text-xs font-bold text-white sm:start-5 sm:top-5">
             {label}

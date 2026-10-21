@@ -8,7 +8,7 @@ import { LogoMark } from '@/components/ui/Logo';
 import { siteConfig } from '@/config/site';
 import { getDictionary, localePath, pagePaths, type Locale } from '@/i18n';
 
-/** Split intro: landscape promo video on the physical right, doctor profile on the left. */
+/** Split intro: landscape intro video (shared with the about page) on the physical right, doctor profile on the left. */
 export function IntroSection({ locale }: { locale: Locale }) {
   const t = getDictionary(locale);
   const intro = t.home.intro;
@@ -23,8 +23,9 @@ export function IntroSection({ locale }: { locale: Locale }) {
           <FeatureVideo
             title={intro.videoTitle}
             label={intro.videoLabel}
-            youtubeId={siteConfig.videos.homePromo.youtubeId}
-            src={siteConfig.videos.homePromo.src}
+            youtubeId={siteConfig.videos.intro.youtubeId}
+            src={siteConfig.videos.intro.src}
+            poster={siteConfig.videos.intro.poster}
             portraitAlt={t.doctor.portraitAlt}
             labels={{ playVideo: t.common.playVideo, videoSoon: t.common.videoSoon }}
           />

@@ -4,13 +4,23 @@
   "private": true,
   "description": "Bilingual (Arabic / English) static website for Dr. Ezzat Ali, Consultant Ophthalmologist.",
   "scripts": {
-    "dev": "next dev",
+    "predev": "node --env-file-if-exists=.env.local scripts/cms-pull.mjs",
+    "dev": "node --env-file-if-exists=.env.local scripts/dev.mjs",
+    "prebuild": "node --env-file-if-exists=.env.local scripts/cms-pull.mjs",
     "build": "next build",
     "postbuild": "node scripts/fix-static-export.mjs",
     "start": "npx serve@14 out",
-    "typecheck": "tsc --noEmit"
+    "pretypecheck": "node scripts/cms-pull.mjs --if-missing",
+    "typecheck": "tsc --noEmit",
+    "cms:pull": "node --env-file-if-exists=.env.local scripts/cms-pull.mjs",
+    "cms:seed-sql": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/generate-seed.mjs",
+    "cms:create-admin": "node --env-file-if-exists=.env.local scripts/create-admin.mjs"
+  },
+  "engines": {
+    "node": ">=22.18"
   },
   "dependencies": {
+    "@supabase/supabase-js": "2.117.2",
     "framer-motion": "^14.3.1",
     "lucide-react": "^1.59.0",
     "next": "16.4.2",

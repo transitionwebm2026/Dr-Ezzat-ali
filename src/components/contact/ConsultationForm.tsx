@@ -11,6 +11,7 @@ import type { Dictionary } from '@/i18n/dictionaries/ar';
 import { cn } from '@/lib/cn';
 import { whatsappUrl } from '@/lib/contact';
 import { formatDate } from '@/lib/format';
+import { saveConsultation } from '@/lib/supabase/consultations';
 
 type FormLabels = Dictionary['contact']['form'];
 type Field = 'name' | 'phone' | 'date' | 'type' | 'notes';
@@ -137,10 +138,21 @@ export function ConsultationForm({ locale, labels }: ConsultationFormProps) {
     }
 
     const url = whatsappUrl(buildMessage(values, labels, locale));
+    // Opened synchronously, before any network call, so the browser still treats it as a user action.
     const popup = window.open(url, '_blank');
     if (popup) popup.opener = null;
     else window.location.href = url; // Popup blocked → open in the same tab.
     setSentUrl(url);
+
+    // Copy for the clinic's dashboard (/admin → consultations).
+    saveConsultation({
+      patient_name: values.name.trim(),
+      phone: normalizeDigits(values.phone).trim(),
+      preferred_date: values.date || null,
+      consultation_type: values.type,
+      notes: values.notes.trim() || null,
+      locale,
+    });
   };
 
   const reset = () => {

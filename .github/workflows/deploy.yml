@@ -1,0 +1,63 @@
+# Builds the static site from the latest Supabase content and uploads it to Hostinger (public_html).
+#
+# Triggers
+#   • repository_dispatch "cms-publish" — sent by the `publish-site` Edge Function after every CMS save
+#   • push to main                      — code changes
+#   • workflow_dispatch                 — "Run workflow" button in GitHub → Actions
+#
+# Repository secrets (Settings → Secrets and variables → Actions):
+#   NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY   (public values, RLS-protected)
+#   FTP_SERVER, FTP_USERNAME, FTP_PASSWORD                           (hPanel → Files → FTP Accounts)
+# Optional repository variable:
+#   FTP_SERVER_DIR   folder on the FTP account that maps to the website root (default: ./public_html/)
+#
+# Never add SUPABASE_SERVICE_ROLE_KEY here — the build only needs the public key.
+
+name: Build & deploy to Hostinger
+
+on:
+  repository_dispatch:
+    types: [cms-publish]
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+# One deploy at a time. A burst of CMS saves collapses into: the running build + one queued build
+# (GitHub replaces an older pending run with the newest), so the last save always ends up live.
+concurrency:
+  group: deploy-hostinger
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - run: npm ci
+
+      - name: Build static export (pulls published CMS content first)
+        run: npm run build
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY }}
+          # Fail rather than deploy placeholder content if Supabase is unreachable.
+          CMS_REQUIRED: '1'
+
+      - name: Upload to Hostinger
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+        with:
+          server: ${{ secrets.FTP_SERVER }}
+          username: ${{ secrets.FTP_USERNAME }}
+          password: ${{ secrets.FTP_PASSWORD }}
+          local-dir: ./out/
+          server-dir: ${{ vars.FTP_SERVER_DIR || './public_html/' }}

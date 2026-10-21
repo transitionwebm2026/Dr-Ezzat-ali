@@ -11,14 +11,16 @@ type ServiceCardProps = {
   tag?: string;
   cta: string;
   index: number;
+  /** Photo uploaded in the CMS (replaces the illustration). */
+  image?: string;
 };
 
-export function ServiceCard({ id, href, title, description, tag, cta, index }: ServiceCardProps) {
+export function ServiceCard({ id, href, title, description, tag, cta, index, image }: ServiceCardProps) {
   const visual = getServiceVisual(id);
 
   return (
     <article className="card card-hover group flex h-full flex-col overflow-hidden p-2">
-      <OpticArt tone={visual.tone} icon={visual.icon} image={visual.image} imageAlt={title} className="aspect-[16/10] rounded-[1.25rem]">
+      <OpticArt tone={visual.tone} icon={visual.icon} image={image ?? visual.image} imageAlt={title} className="aspect-[16/10] rounded-[1.25rem]">
         <span aria-hidden className="absolute bottom-3 end-5 font-heading text-5xl font-bold text-white/20">
           {String(index + 1).padStart(2, '0')}
         </span>

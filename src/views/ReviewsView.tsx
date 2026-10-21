@@ -29,8 +29,8 @@ export function ReviewsView({ locale }: { locale: Locale }) {
         <Container>
           <SectionHeading title={reviews.grid.title} subtitle={reviews.grid.subtitle} />
           <Stagger className="grid gap-6 md:grid-cols-2 lg:grid-cols-3" stagger={0.08}>
-            {reviews.items.map((review) => (
-              <StaggerItem key={review.name} className="h-full">
+            {reviews.items.map((review, index) => (
+              <StaggerItem key={`${review.name}-${index}`} className="h-full">
                 <ReviewCard review={review} />
               </StaggerItem>
             ))}
