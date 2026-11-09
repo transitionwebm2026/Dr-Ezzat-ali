@@ -9,7 +9,12 @@
 import type { IconKey } from '@/components/icons/registry';
 import type { SceneKey } from '@/components/services/TechniqueScene';
 
-export type Tone = 'cyan' | 'navy' | 'sky' | 'deep' | 'teal' | 'frost';
+export const tones = ['cyan', 'navy', 'sky', 'deep', 'teal', 'frost'] as const;
+export type Tone = (typeof tones)[number];
+
+export function isTone(value: unknown): value is Tone {
+  return typeof value === 'string' && (tones as readonly string[]).includes(value);
+}
 
 export type Visual = { icon: IconKey; tone: Tone; image?: string };
 
@@ -29,6 +34,29 @@ export const serviceVisuals: Record<string, Visual> = {
 
 export const fallbackVisual: Visual = { icon: 'eye', tone: 'cyan' };
 
+/** Home-page sections whose cards are picked from the services page. */
+export const homeSections = ['surgeries', 'treatments'] as const;
+export type HomeSection = (typeof homeSections)[number];
+
+export function isHomeSection(value: unknown): value is HomeSection {
+  return typeof value === 'string' && (homeSections as readonly string[]).includes(value);
+}
+
+/**
+ * Default home-page cards (repository content; the dashboard sets its own per specialty / technique):
+ * specialty or technique id → home section + short tag shown on the card.
+ */
+export const homeDefaults: Record<string, { section: HomeSection; tag: string }> = {
+  // Specialties → "Key surgeries"
+  lasik: { section: 'surgeries', tag: 'Femto-LASIK · SMILE' },
+  cataract: { section: 'surgeries', tag: 'Phaco · Premium IOL' },
+  retina: { section: 'surgeries', tag: 'Vitrectomy' },
+  // Techniques → "Advanced non-surgical treatments"
+  'anti-vegf': { section: 'treatments', tag: 'Anti-VEGF' },
+  'retinal-laser': { section: 'treatments', tag: 'Laser' },
+  slt: { section: 'treatments', tag: 'SLT' },
+};
+
 /**
  * Photos for the three "expertise" cards on the About page (e.g. '/images/about/refractive.jpg').
  * Kept separate from `serviceVisuals` so they don't change the cards on other pages. Empty = illustration.
@@ -39,8 +67,11 @@ export const expertiseImages: Record<string, string> = {
   retina: '',
 };
 
-export function getServiceVisual(id: string): Visual {
-  return serviceVisuals[id] ?? fallbackVisual;
+/** Visual of a service card. `custom` = choices saved in the dashboard; anything left out falls back to the default for `id`. */
+export function getServiceVisual(id: string, custom?: Partial<Visual>): Visual {
+  const base = serviceVisuals[id] ?? fallbackVisual;
+  if (!custom) return base;
+  return { icon: custom.icon ?? base.icon, tone: custom.tone ?? base.tone, image: custom.image ?? base.image };
 }
 
 /**
@@ -72,8 +103,10 @@ export const techniqueVisuals: Record<string, TechniqueVisual> = {
   'glaucoma-surgery': { scene: 'shunt' },
 };
 
-export function getTechniqueVisual(id: string): TechniqueVisual {
-  return techniqueVisuals[id] ?? { scene: 'femto' };
+export function getTechniqueVisual(id: string, custom?: Partial<TechniqueVisual>): TechniqueVisual {
+  const base = techniqueVisuals[id] ?? { scene: 'femto' };
+  if (!custom) return base;
+  return { scene: custom.scene ?? base.scene, image: custom.image ?? base.image };
 }
 
 export const videoSources: Record<string, { youtubeId: string; src: string; tone: Tone }> = {

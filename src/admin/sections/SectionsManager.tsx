@@ -1,6 +1,6 @@
 'use client';
 
-import { ImagePlay, RotateCcw, Save } from 'lucide-react';
+import { Info, RotateCcw, Save } from 'lucide-react';
 import Link from 'next/link';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { usePublish } from '@/admin/publish/PublishProvider';
@@ -17,11 +17,27 @@ import { ContentEditor } from './ContentEditor';
 type Locale = 'ar' | 'en';
 const defaults: Record<Locale, unknown> = { ar, en };
 
-/** Sections whose picture / video is uploaded on the "hero & intro video" page, not edited here. */
-function mediaNote(key: string): string | null {
-  if (key.endsWith('.hero')) return 'صورة الواجهة';
-  if (key === 'home.intro' || key === 'about.video') return 'الفيديو التعريفي وصورة الغلاف';
-  return null;
+type Note = { text: string; href: string; page: string };
+
+const heroVideo = { href: '/admin/hero-video/', page: 'صورة الواجهة والفيديو' };
+
+/** Parts of a section edited on another dashboard page (uploads, and lists with their own table). */
+const elsewhere: Record<string, Note> = {
+  'home.intro': { text: 'الفيديو التعريفي وصورة الغلاف يُرفعان من صفحة', ...heroVideo },
+  'about.video': { text: 'الفيديو التعريفي وصورة الغلاف يُرفعان من صفحة', ...heroVideo },
+  'home.surgeries': { text: 'البطاقات تُختار من «الظهور في الصفحة الرئيسية» داخل كل تخصص أو تقنية في صفحة', href: '/admin/specialties/', page: 'الخدمات والتخصصات' },
+  'home.treatments': { text: 'البطاقات تُختار من «الظهور في الصفحة الرئيسية» داخل كل تخصص أو تقنية في صفحة', href: '/admin/specialties/', page: 'الخدمات والتخصصات' },
+  'home.reviews': { text: 'الآراء المعروضة تُختار بزرار «في الرئيسية» في صفحة', href: '/admin/reviews/', page: 'آراء المرضى' },
+  'home.videos': { text: 'أول 3 فيديوهات مفعّل لها «في الرئيسية» تُعرض — من صفحة', href: '/admin/videos/', page: 'الفيديوهات' },
+  'home.articles': { text: 'أول 3 مقالات مفعّل لها «في الرئيسية» تُعرض — من صفحة', href: '/admin/articles/', page: 'المقالات' },
+  'home.faq': { text: 'الأسئلة نفسها تُدار من صفحة', href: '/admin/faqs/', page: 'الأسئلة الشائعة' },
+  'services.specialties': { text: 'التخصصات نفسها (الحالات والتقنيات والصور والترتيب) تُدار من صفحة', href: '/admin/specialties/', page: 'الخدمات والتخصصات' },
+  'services.faq': { text: 'أسئلة ما قبل العملية وبعدها تُدار من صفحة', href: '/admin/faqs/?group=services_before', page: 'الأسئلة الشائعة' },
+};
+
+function noteFor(key: string): Note | null {
+  if (key.endsWith('.hero')) return { text: 'صورة الواجهة تُرفع من صفحة', ...heroVideo };
+  return elsewhere[key] ?? null;
 }
 
 type SectionFormProps = { def: SectionDef; row: PageSectionRow | undefined; onSaved: () => Promise<void>; onDirtyChange: (dirty: boolean) => void };
@@ -40,7 +56,7 @@ function SectionForm({ def, row, onSaved, onDirtyChange }: SectionFormProps) {
   const toast = useToast();
   const { schedulePublish } = usePublish();
   const dirty = JSON.stringify(draft) !== JSON.stringify(initial);
-  const media = mediaNote(def.key);
+  const note = noteFor(def.key);
 
   useEffect(() => onDirtyChange(dirty), [dirty, onDirtyChange]);
 
@@ -84,12 +100,12 @@ function SectionForm({ def, row, onSaved, onDirtyChange }: SectionFormProps) {
         </>
       }
     >
-      {media && (
+      {note && (
         <p className="mb-5 flex flex-wrap items-center gap-2 rounded-xl bg-primary-50 px-4 py-3 text-sm text-secondary-700">
-          <ImagePlay aria-hidden className="size-4 shrink-0 text-primary-600" />
-          {media} تُرفع من صفحة
-          <Link href="/admin/hero-video/" className="font-bold text-primary-700 underline underline-offset-4 hover:text-primary-800">
-            صورة الواجهة والفيديو
+          <Info aria-hidden className="size-4 shrink-0 text-primary-600" />
+          {note.text}
+          <Link href={note.href} className="font-bold text-primary-700 underline underline-offset-4 hover:text-primary-800">
+            {note.page}
           </Link>
         </p>
       )}
@@ -139,6 +155,15 @@ export function SectionsManager() {
   useEffect(() => {
     void load();
   }, [load]);
+
+  // Deep link to one page's sections, e.g. /admin/sections/?page=services
+  useEffect(() => {
+    const requested = new URLSearchParams(window.location.search).get('page');
+    const first = sectionRegistry.find((entry) => entry.page === requested);
+    if (!first) return;
+    setPage(first.page);
+    setSelected(first.key);
+  }, []);
 
   if (error) return <ErrorNotice message={error} onRetry={() => void load()} />;
   if (!rows) return <LoadingBlock />;

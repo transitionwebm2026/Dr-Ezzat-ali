@@ -8,7 +8,7 @@
  */
 import { writeFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
-import { videoSources } from '../src/content/media.ts';
+import { homeDefaults, serviceVisuals, techniqueVisuals, videoSources } from '../src/content/media.ts';
 import ar from '../src/i18n/dictionaries/ar.ts';
 import en from '../src/i18n/dictionaries/en.ts';
 
@@ -71,12 +71,36 @@ const navigation = insertIfEmpty(
   pages.map(([key, path], index) => [text(ar.nav[key]), text(en.nav[key]), text(path), (index + 1) * 10]),
 );
 
-const services = (table, arItems, enItems) =>
-  insertIfEmpty(
-    table,
-    ['key', 'tag', 'title_ar', 'title_en', 'description_ar', 'description_en', 'sort_order'],
-    zip(arItems, enItems, (a, e, index) => [text(a.id), q(a.tag), text(a.title), text(e.title), text(a.description), text(e.description), (index + 1) * 10]),
-  );
+// Services page specialties, with the icon / colour / illustration they use today, and what they show on the
+// home page (the home "surgeries" / "treatments" cards are picked from here).
+const specialties = insertIfEmpty(
+  'specialties',
+  [
+    'key', 'title_ar', 'title_en', 'short_ar', 'short_en', 'description_ar', 'description_en',
+    'conditions_ar', 'conditions_en', 'techniques', 'duration_ar', 'duration_en', 'recovery_ar', 'recovery_en',
+    'icon', 'tone', 'image_url', 'home_section', 'tag', 'summary_ar', 'summary_en', 'sort_order',
+  ],
+  zip(ar.services.specialties.items, en.services.specialties.items, (a, e, index) => {
+    const visual = serviceVisuals[a.id] ?? {};
+    const techniques = zip(a.techniques, e.techniques, (ta, te) => ({
+      key: ta.id,
+      name_ar: ta.name,
+      name_en: te.name,
+      detail_ar: ta.detail,
+      detail_en: te.detail,
+      scene: techniqueVisuals[ta.id]?.scene ?? null,
+      image_url: techniqueVisuals[ta.id]?.image ?? null,
+      home_section: homeDefaults[ta.id]?.section ?? null,
+      tag: homeDefaults[ta.id]?.tag ?? null,
+    }));
+    return [
+      text(a.id), text(a.title), text(e.title), text(a.short), text(e.short), text(a.description), text(e.description),
+      list(a.conditions), list(e.conditions), json(techniques), text(a.duration), text(e.duration), text(a.recovery), text(e.recovery),
+      q(visual.icon), q(visual.tone), q(visual.image), q(homeDefaults[a.id]?.section), q(homeDefaults[a.id]?.tag),
+      text(a.summary), text(e.summary), (index + 1) * 10,
+    ];
+  }),
+);
 
 const reviews = insertIfEmpty(
   'reviews',
@@ -132,9 +156,7 @@ ${footer}
 
 ${navigation}
 
-${services('surgeries', ar.home.surgeries.items, en.home.surgeries.items)}
-
-${services('treatments', ar.home.treatments.items, en.home.treatments.items)}
+${specialties}
 
 ${reviews}
 

@@ -5,33 +5,20 @@ import { ButtonLink } from '@/components/ui/Button';
 import { Container, Section } from '@/components/ui/Container';
 import { SectionHeading } from '@/components/ui/SectionHeading';
 import { localePath, pagePaths, type Locale } from '@/i18n';
-
-type ShowcaseContent = {
-  title: string;
-  subtitle: string;
-  cta: string;
-  items: { id: string; tag: string; title: string; description: string; image?: string }[];
-};
-
-/** Maps a card id to the matching deep-dive section on the services page (if any). */
-const servicesAnchor: Record<string, string> = {
-  lasik: 'lasik',
-  cataract: 'cataract',
-  retina: 'retina',
-  glaucoma: 'glaucoma',
-  'anti-vegf': 'retina',
-};
+import type { HomeCard } from '@/lib/cms/content';
 
 type ServicesShowcaseProps = {
   locale: Locale;
-  content: ShowcaseContent;
+  content: { title: string; subtitle: string; cta: string };
+  /** Specialties / techniques of the services page chosen for this home section. */
+  cards: HomeCard[];
   cardCta: string;
   tone?: 'white' | 'surface' | 'tint';
   id?: string;
 };
 
-/** Three precision cards + a CTA to the services page (used for surgeries and treatments). */
-export function ServicesShowcase({ locale, content, cardCta, tone = 'white', id }: ServicesShowcaseProps) {
+/** Service cards taken from the services page + a CTA to it (used for surgeries and treatments). */
+export function ServicesShowcase({ locale, content, cards, cardCta, tone = 'white', id }: ServicesShowcaseProps) {
   const servicesHref = localePath(locale, pagePaths.services);
 
   return (
@@ -39,23 +26,11 @@ export function ServicesShowcase({ locale, content, cardCta, tone = 'white', id 
       <Container>
         <SectionHeading title={content.title} subtitle={content.subtitle} />
         <Stagger className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-          {content.items.map((item, index) => {
-            const anchor = servicesAnchor[item.id];
-            return (
-              <StaggerItem key={item.id} className="h-full">
-                <ServiceCard
-                  id={item.id}
-                  index={index}
-                  tag={item.tag}
-                  title={item.title}
-                  description={item.description}
-                  image={item.image}
-                  cta={cardCta}
-                  href={anchor ? localePath(locale, `${pagePaths.services}#${anchor}`) : servicesHref}
-                />
-              </StaggerItem>
-            );
-          })}
+          {cards.map((card, index) => (
+            <StaggerItem key={card.key} className="h-full">
+              <ServiceCard card={card} index={index} cta={cardCta} href={localePath(locale, `${pagePaths.services}#${card.anchor}`)} />
+            </StaggerItem>
+          ))}
         </Stagger>
         <Reveal className="mt-12 flex justify-center">
           <ButtonLink href={servicesHref} variant="secondary" size="lg">

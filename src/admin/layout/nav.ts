@@ -9,15 +9,19 @@ import {
   PanelBottom,
   PanelTop,
   Phone,
-  Pill,
-  Scissors,
   Settings,
   Star,
+  Stethoscope,
   type LucideIcon,
 } from 'lucide-react';
 
 export type AdminNavItem = { href: string; label: string; icon: LucideIcon };
-export type AdminNavGroup = { label: string; items: AdminNavItem[] };
+export type AdminNavGroup = {
+  label: string;
+  items: AdminNavItem[];
+  /** Every item is a content table named after its path (/admin/<table>/) — counted on the overview page. */
+  library?: boolean;
+};
 
 export const adminNav: AdminNavGroup[] = [
   {
@@ -49,10 +53,11 @@ export const adminNav: AdminNavGroup[] = [
     ],
   },
   {
+    // Each library feeds its own page and the matching home-page section.
     label: 'مكتبات المحتوى',
+    library: true,
     items: [
-      { href: '/admin/surgeries/', label: 'الجراحات', icon: Scissors },
-      { href: '/admin/treatments/', label: 'العلاجات', icon: Pill },
+      { href: '/admin/specialties/', label: 'الخدمات والتخصصات', icon: Stethoscope },
       { href: '/admin/reviews/', label: 'آراء المرضى', icon: Star },
       { href: '/admin/videos/', label: 'الفيديوهات', icon: Clapperboard },
       { href: '/admin/articles/', label: 'المقالات', icon: Newspaper },

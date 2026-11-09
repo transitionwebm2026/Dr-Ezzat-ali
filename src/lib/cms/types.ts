@@ -71,13 +71,48 @@ export type PageSectionRow = {
 
 type Ordered = { id: string; sort_order: number; is_published: boolean; created_at: string; updated_at: string };
 
-export type ServiceRow = Ordered & {
+/** Home-page section a specialty / technique card appears in (`HomeSection`); NULL = not on the home page. */
+type HomeColumns = { home_section?: string | null; tag?: string | null };
+
+/** One technique card inside a specialty (`specialties.techniques` jsonb array). */
+export type TechniqueEntry = HomeColumns & {
+  /** Stable English id, unique inside the specialty. */
   key: string;
-  tag: string | null;
+  name_ar: string;
+  name_en: string;
+  detail_ar: string;
+  detail_en: string;
+  /** Animated illustration (`SceneKey`), used while no photo is set. */
+  scene: string | null;
+  image_url: string | null;
+};
+
+/**
+ * Deep-dive specialty on the services page (quick-jump card + detail section + footer link), and the source
+ * of the home-page service cards. The home columns are optional: they are added by a later migration.
+ */
+export type SpecialtyRow = Ordered & HomeColumns & {
+  /** Short text of its home-page card (empty → the description). */
+  summary_ar?: string;
+  summary_en?: string;
+  /** Anchor on the services page: /services/#key */
+  key: string;
   title_ar: string;
   title_en: string;
+  short_ar: string;
+  short_en: string;
   description_ar: string;
   description_en: string;
+  conditions_ar: string[];
+  conditions_en: string[];
+  techniques: TechniqueEntry[];
+  duration_ar: string;
+  duration_en: string;
+  recovery_ar: string;
+  recovery_en: string;
+  /** `IconKey` / `Tone`; NULL = the default for `key` (src/content/media.ts). */
+  icon: string | null;
+  tone: string | null;
   image_url: string | null;
 };
 
@@ -156,8 +191,8 @@ export type CmsData = {
   footer: FooterSettingsRow | null;
   navigation: NavigationRow[];
   sections: PageSectionRow[];
-  surgeries: ServiceRow[];
-  treatments: ServiceRow[];
+  /** `null` / missing = the `specialties` table does not exist yet (migration not run): repository defaults are used. */
+  specialties?: SpecialtyRow[] | null;
   reviews: ReviewRow[];
   videos: VideoRow[];
   articles: ArticleRow[];

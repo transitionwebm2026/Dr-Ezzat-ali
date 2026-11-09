@@ -1,6 +1,7 @@
 'use client';
 
-import { Image as ImageIcon, Pencil, Plus } from 'lucide-react';
+import { ArrowLeft, Image as ImageIcon, Pencil, Plus } from 'lucide-react';
+import Link from 'next/link';
 import { useCallback, useEffect, useState } from 'react';
 import { persistOrder } from '@/admin/lib/order';
 import { AdminPage } from '@/admin/layout/AdminPage';
@@ -28,13 +29,21 @@ export function CollectionManager({ collection }: { collection: CollectionKey })
   const load = useCallback(async () => {
     setError(null);
     const { data, error: loadError } = await getSupabase().from(config.table).select('*').order('sort_order').order('created_at');
-    if (loadError) setError(`تعذّر تحميل البيانات: ${loadError.message}`);
+    if (loadError?.code === 'PGRST205' || loadError?.code === '42P01')
+      setError(`جدول «${config.table}» غير موجود بعد في قاعدة البيانات — شغّل ملف الـ migration الخاص به من مجلد supabase/migrations في Supabase → SQL Editor ثم أعد المحاولة.`);
+    else if (loadError) setError(`تعذّر تحميل البيانات: ${loadError.message}`);
     else setRows(data as Saved[]);
   }, [config.table]);
 
   useEffect(() => {
     void load();
   }, [load]);
+
+  // Deep link to one tab, e.g. /admin/faqs/?group=services_before
+  useEffect(() => {
+    const requested = new URLSearchParams(window.location.search).get('group');
+    if (requested && config.groupBy?.options.some((option) => option.value === requested)) setGroup(requested);
+  }, [config.groupBy]);
 
   const visible = (rows ?? []).filter((row) => !config.groupBy || row[config.groupBy.name] === group);
 
@@ -75,6 +84,22 @@ export function CollectionManager({ collection }: { collection: CollectionKey })
         </Button>
       }
     >
+      {config.related && (
+        <nav aria-label="صفحات مرتبطة" className="mb-5 flex flex-wrap items-center gap-2">
+          <span className="text-xs font-bold text-slate-500">صفحات مرتبطة:</span>
+          {config.related.map((link) => (
+            <Link
+              key={link.href}
+              href={link.href}
+              className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-bold text-secondary-700 transition hover:border-primary-200 hover:text-primary-700"
+            >
+              {link.label}
+              <ArrowLeft aria-hidden className="size-3.5 ltr:rotate-180" />
+            </Link>
+          ))}
+        </nav>
+      )}
+
       {config.groupBy && (
         <Tabs
           className="mb-5 w-fit"

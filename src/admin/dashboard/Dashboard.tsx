@@ -8,7 +8,8 @@ import { usePublish } from '@/admin/publish/PublishProvider';
 import { Button, Card } from '@/admin/ui/primitives';
 import { getSupabase } from '@/lib/supabase/client';
 
-const libraries = adminNav.find((group) => group.label === 'مكتبات المحتوى')!.items;
+const libraryGroups = adminNav.filter((group) => group.library);
+const libraries = libraryGroups.flatMap((group) => group.items);
 const tableOf = (href: string) => href.split('/').filter(Boolean).pop()!;
 
 /** Overview: content counts, new booking requests and a manual publish button. */
@@ -60,24 +61,26 @@ export function Dashboard() {
         </Card>
       </div>
 
-      <Card title="مكتبات المحتوى">
-        <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {libraries.map(({ href, label, icon: Icon }) => (
-            <li key={href}>
-              <Link href={href} className="group flex items-center gap-3 rounded-xl border border-slate-200 p-4 transition hover:border-primary-200 hover:bg-primary-50/40">
-                <span className="grid size-11 place-items-center rounded-xl bg-primary-50 text-primary-600">
-                  <Icon aria-hidden className="size-5" />
-                </span>
-                <span className="flex-1">
-                  <span className="block font-heading text-sm font-bold text-secondary-800">{label}</span>
-                  <span className="text-xs text-slate-500">{counts[tableOf(href)] ?? '…'} عنصر</span>
-                </span>
-                <ArrowLeft aria-hidden className="size-4 text-slate-300 transition group-hover:text-primary ltr:rotate-180" />
-              </Link>
-            </li>
-          ))}
-        </ul>
-      </Card>
+      {libraryGroups.map((group) => (
+        <Card key={group.label} title={group.label}>
+          <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {group.items.map(({ href, label, icon: Icon }) => (
+              <li key={href}>
+                <Link href={href} className="group flex items-center gap-3 rounded-xl border border-slate-200 p-4 transition hover:border-primary-200 hover:bg-primary-50/40">
+                  <span className="grid size-11 place-items-center rounded-xl bg-primary-50 text-primary-600">
+                    <Icon aria-hidden className="size-5" />
+                  </span>
+                  <span className="flex-1">
+                    <span className="block font-heading text-sm font-bold text-secondary-800">{label}</span>
+                    <span className="text-xs text-slate-500">{counts[tableOf(href)] ?? '…'} عنصر</span>
+                  </span>
+                  <ArrowLeft aria-hidden className="size-4 text-slate-300 transition group-hover:text-primary ltr:rotate-180" />
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </Card>
+      ))}
     </div>
   );
 }

@@ -6,12 +6,13 @@ import Image from 'next/image';
 import { createContext, useContext, useEffect, useId, useRef, useState, type CSSProperties, type ReactNode, type RefObject } from 'react';
 import { Icon, type IconKey } from '@/components/icons/registry';
 import { EASE_OPTICAL } from '@/components/motion/Reveal';
-import { TechniqueScene } from '@/components/services/TechniqueScene';
+import { TechniqueScene, type SceneKey } from '@/components/services/TechniqueScene';
 import { OpticArt } from '@/components/ui/OpticArt';
 import { getTechniqueVisual, type Tone } from '@/content/media';
 import { cn } from '@/lib/cn';
 
-type Technique = { id: string; name: string; detail: string };
+/** `scene` / `image` come from the dashboard; when missing, the defaults keyed by `id` are used. */
+type Technique = { id: string; name: string; detail: string; scene?: SceneKey; image?: string };
 
 type ShowcaseState = {
   active: number;
@@ -83,6 +84,9 @@ type TechniquePreviewProps = {
   techniques: Technique[];
   tone: Tone;
   icon: IconKey;
+  /** Shown when the specialty has no techniques (its card photo, if any). */
+  fallbackImage?: string;
+  fallbackAlt?: string;
   /** Specialty position, shown as the large faded number. */
   index: number;
   duration: string;
@@ -101,6 +105,8 @@ export function TechniquePreview({
   techniques,
   tone,
   icon,
+  fallbackImage,
+  fallbackAlt = '',
   index,
   duration,
   recovery,
@@ -114,8 +120,15 @@ export function TechniquePreview({
   const [shown, setShown] = useState(active);
   const [switched, setSwitched] = useState(false);
   const [offscreen, setOffscreen] = useState(false);
-  const technique = techniques[shown];
-  const visual = getTechniqueVisual(technique.id);
+  const technique: Technique | undefined = techniques[shown];
+  const visual = technique
+    ? getTechniqueVisual(technique.id, { scene: technique.scene, image: technique.image })
+    : { scene: undefined, image: fallbackImage };
+  const mediaKey = technique?.id ?? 'specialty';
+  const facts = [
+    { label: durationLabel, value: duration, Icon: Timer },
+    { label: recoveryLabel, value: recovery, Icon: TrendingUp },
+  ].filter((fact) => fact.value.trim());
 
   // Shut = lids pushed past each other, so the almond-shaped gap fully closes.
   const moveLids = (shut: boolean, options: AnimationOptions) =>
@@ -169,10 +182,10 @@ export function TechniquePreview({
 
   return (
     <div ref={previewRef} id={previewId} data-paused={offscreen || undefined}>
-      <OpticArt tone={tone} rings={false} className="aspect-[3/4] rounded-[2rem] shadow-elevated sm:aspect-square lg:aspect-[4/5]">
+      <OpticArt tone={tone} rings={!technique && !visual.image} className="aspect-[3/4] rounded-[2rem] shadow-elevated sm:aspect-square lg:aspect-[4/5]">
         {visual.image && (
-          <motion.div key={technique.id} className="absolute inset-0" {...settle}>
-            <Image src={visual.image} alt={technique.name} fill sizes="(min-width: 1024px) 40vw, 100vw" className="object-cover" />
+          <motion.div key={mediaKey} className="absolute inset-0" {...settle}>
+            <Image src={visual.image} alt={technique?.name ?? fallbackAlt} fill sizes="(min-width: 1024px) 40vw, 100vw" className="object-cover" />
             <div aria-hidden className="absolute inset-0 bg-gradient-to-t from-secondary-950/75 via-secondary-950/10 to-secondary-950/30" />
           </motion.div>
         )}
@@ -195,8 +208,8 @@ export function TechniquePreview({
           {/* Viewfinder stage */}
           <div className="relative flex min-h-0 flex-1 justify-center">
             <div aria-hidden className="relative aspect-square h-full max-w-full">
-              {!visual.image && (
-                <motion.div key={technique.id} className="absolute -inset-[2%]" {...settle}>
+              {!visual.image && visual.scene && (
+                <motion.div key={mediaKey} className="absolute -inset-[2%]" {...settle}>
                   <TechniqueScene scene={visual.scene} className="size-full text-white" />
                 </motion.div>
               )}
@@ -211,7 +224,7 @@ export function TechniquePreview({
               {/* Iris ring that dilates outward as the eye reopens */}
               <AnimatePresence initial={false}>
                 <motion.span
-                  key={technique.id}
+                  key={mediaKey}
                   className="absolute inset-[20%] z-20 rounded-full border-2 border-white/70"
                   initial={{ opacity: 1, scale: 0.15 }}
                   animate={{ opacity: 0, scale: 1.5 }}
@@ -223,63 +236,62 @@ export function TechniquePreview({
           </div>
 
           <div className="relative z-20 mt-3 space-y-3">
-            <div className="glass-dark flex items-center gap-3 rounded-2xl px-4 py-2.5 text-white">
-              <span aria-hidden className="relative flex size-2.5 shrink-0">
-                <span className="absolute inset-0 animate-ping rounded-full bg-primary-300 opacity-75" />
-                <span className="relative size-2.5 rounded-full bg-primary-200" />
-              </span>
-              <div aria-live="polite" className="min-w-0 flex-1">
-                <span className="block text-[0.7rem] leading-tight text-white/60">{nowShowingLabel}</span>
-                <AnimatePresence mode="wait" initial={false}>
-                  <motion.p
-                    key={technique.id}
-                    initial={{ opacity: 0, y: 6 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -6 }}
-                    transition={{ duration: 0.25, ease: EASE_OPTICAL }}
-                    className="truncate font-heading text-sm font-bold leading-snug"
-                  >
-                    {technique.name}
-                  </motion.p>
-                </AnimatePresence>
+            {technique && (
+              <div className="glass-dark flex items-center gap-3 rounded-2xl px-4 py-2.5 text-white">
+                <span aria-hidden className="relative flex size-2.5 shrink-0">
+                  <span className="absolute inset-0 animate-ping rounded-full bg-primary-300 opacity-75" />
+                  <span className="relative size-2.5 rounded-full bg-primary-200" />
+                </span>
+                <div aria-live="polite" className="min-w-0 flex-1">
+                  <span className="block text-[0.7rem] leading-tight text-white/60">{nowShowingLabel}</span>
+                  <AnimatePresence mode="wait" initial={false}>
+                    <motion.p
+                      key={technique.id}
+                      initial={{ opacity: 0, y: 6 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -6 }}
+                      transition={{ duration: 0.25, ease: EASE_OPTICAL }}
+                      className="truncate font-heading text-sm font-bold leading-snug"
+                    >
+                      {technique.name}
+                    </motion.p>
+                  </AnimatePresence>
+                </div>
+                <div className="flex shrink-0 items-center">
+                  {techniques.map((item, i) => (
+                    <button
+                      key={item.id}
+                      type="button"
+                      aria-label={item.name}
+                      aria-pressed={i === active}
+                      onClick={() => select(i)}
+                      className="group/dot grid h-7 place-items-center px-1 focus-visible:ring-offset-0"
+                    >
+                      <span
+                        className={cn(
+                          'block h-1.5 rounded-full transition-all duration-500 ease-optical',
+                          i === active ? 'w-5 bg-white' : 'w-1.5 bg-white/35 group-hover/dot:bg-white/70',
+                        )}
+                      />
+                    </button>
+                  ))}
+                </div>
               </div>
-              <div className="flex shrink-0 items-center">
-                {techniques.map((item, i) => (
-                  <button
-                    key={item.id}
-                    type="button"
-                    aria-label={item.name}
-                    aria-pressed={i === active}
-                    onClick={() => select(i)}
-                    className="group/dot grid h-7 place-items-center px-1 focus-visible:ring-offset-0"
-                  >
-                    <span
-                      className={cn(
-                        'block h-1.5 rounded-full transition-all duration-500 ease-optical',
-                        i === active ? 'w-5 bg-white' : 'w-1.5 bg-white/35 group-hover/dot:bg-white/70',
-                      )}
-                    />
-                  </button>
+            )}
+
+            {facts.length > 0 && (
+              <div className={cn('grid gap-3', facts.length > 1 && 'grid-cols-2')}>
+                {facts.map(({ label, value, Icon: FactIcon }) => (
+                  <div key={label} className="glass rounded-2xl p-3.5 sm:p-4">
+                    <span className="flex items-center gap-1.5 text-xs text-slate-500">
+                      <FactIcon aria-hidden className="size-3.5 text-primary" />
+                      {label}
+                    </span>
+                    <p className="mt-1 font-heading text-sm font-bold leading-snug text-secondary-700">{value}</p>
+                  </div>
                 ))}
               </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-3">
-              <div className="glass rounded-2xl p-3.5 sm:p-4">
-                <span className="flex items-center gap-1.5 text-xs text-slate-500">
-                  <Timer aria-hidden className="size-3.5 text-primary" />
-                  {durationLabel}
-                </span>
-                <p className="mt-1 font-heading text-sm font-bold leading-snug text-secondary-700">{duration}</p>
-              </div>
-              <div className="glass rounded-2xl p-3.5 sm:p-4">
-                <span className="flex items-center gap-1.5 text-xs text-slate-500">
-                  <TrendingUp aria-hidden className="size-3.5 text-primary" />
-                  {recoveryLabel}
-                </span>
-                <p className="mt-1 font-heading text-sm font-bold leading-snug text-secondary-700">{recovery}</p>
-              </div>
-            </div>
+            )}
           </div>
         </div>
       </OpticArt>

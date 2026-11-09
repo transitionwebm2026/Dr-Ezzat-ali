@@ -210,51 +210,12 @@ const en: Dictionary = {
       title: 'Key Surgeries',
       subtitle: 'Advanced surgical procedures performed with state-of-the-art equipment and the strictest standards of precision and sterility.',
       cta: 'Explore all services',
-      items: [
-        {
-          id: 'lasik',
-          tag: 'Femto-LASIK · SMILE',
-          title: 'LASIK & Vision Correction',
-          description: 'Correct myopia, hyperopia and astigmatism with Femto-LASIK and SMILE — micron-level precision and a fast recovery.',
-        },
-        {
-          id: 'cataract',
-          tag: 'Phaco · Premium IOL',
-          title: 'Cataract & Lens Implantation',
-          description: 'Stitch-free phaco cataract removal through a micro-incision, with monofocal or multifocal lens implants.',
-        },
-        {
-          id: 'retina',
-          tag: 'Vitrectomy',
-          title: 'Retina & Vitreous Surgery',
-          description: 'Treatment of retinal detachment, macular holes and vitreous haemorrhage with modern micro-surgical techniques.',
-        },
-      ],
     },
+    // The cards of both sections come from the services page (specialties / techniques chosen for the home page).
     treatments: {
       title: 'Advanced Non-Surgical Treatments',
       subtitle: 'Modern therapeutic and diagnostic solutions that protect your sight and halt disease progression early.',
       cta: 'Explore all treatments',
-      items: [
-        {
-          id: 'crosslinking',
-          tag: 'Cross-linking',
-          title: 'Corneal Cross-linking for Keratoconus',
-          description: 'Strengthens corneal fibres using riboflavin (vitamin B2) and UV light to stop keratoconus from progressing.',
-        },
-        {
-          id: 'dry-eye',
-          tag: 'IPL Therapy',
-          title: 'Dry Eye Therapy',
-          description: 'Intense Pulsed Light (IPL) sessions and tailored drop programmes for chronic dry eye and meibomian gland dysfunction.',
-        },
-        {
-          id: 'anti-vegf',
-          tag: 'Anti-VEGF',
-          title: 'Intravitreal Anti-VEGF Injections',
-          description: 'Precise intravitreal injections for diabetic retinopathy, age-related macular degeneration and macular oedema.',
-        },
-      ],
     },
     why: {
       title: 'Why Choose Dr. Ezzat Ali?',
@@ -473,6 +434,7 @@ const en: Dictionary = {
           id: 'lasik',
           title: 'LASIK & Refractive Surgery',
           short: 'Say goodbye to glasses and contacts',
+          summary: 'Correct myopia, hyperopia and astigmatism with Femto-LASIK and SMILE — micron-level precision and a fast recovery.',
           description:
             'We offer the full spectrum of vision-correction procedures and select the right technique for each patient based on corneal thickness and shape, prescription and lifestyle — for the best possible vision with the highest safety.',
           conditions: ['Myopia (short-sightedness)', 'Hyperopia (long-sightedness)', 'Astigmatism', 'Presbyopia'],
@@ -489,6 +451,7 @@ const en: Dictionary = {
           id: 'cataract',
           title: 'Cataract & Lens Implantation',
           short: 'See the world clearly again',
+          summary: 'Stitch-free phaco cataract removal through a micro-incision, with monofocal or multifocal lens implants.',
           description:
             'The clouded natural lens is removed by phacoemulsification through a stitch-free micro-incision and replaced with a high-quality artificial lens, carefully chosen from precise biometry and your daily visual needs.',
           conditions: ['Age-related cataract', 'Diabetic cataract', 'Traumatic or steroid-induced cataract', 'Congenital cataract in children'],
@@ -505,6 +468,7 @@ const en: Dictionary = {
           id: 'retina',
           title: 'Retina & Vitreous',
           short: 'Protecting the centre of your vision',
+          summary: 'Treatment of retinal detachment, macular holes and vitreous haemorrhage with modern micro-surgical techniques.',
           description:
             'Precise diagnosis and treatment of retinal diseases using OCT imaging and the latest laser, injection and micro-surgical techniques — to preserve sight and prevent deterioration.',
           conditions: [
@@ -527,6 +491,7 @@ const en: Dictionary = {
           id: 'glaucoma',
           title: 'Glaucoma',
           short: 'Early detection that protects the optic nerve',
+          summary: 'Precise early diagnosis and treatment with drops, laser and surgery to control eye pressure and protect the optic nerve.',
           description:
             'Glaucoma is a silent disease that can gradually steal sight without obvious symptoms. We rely on precise early diagnosis and long-term treatment plans that control eye pressure and protect the optic nerve for life.',
           conditions: ['Open-angle glaucoma', 'Angle-closure glaucoma', 'Secondary glaucoma', 'Congenital glaucoma'],

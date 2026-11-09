@@ -56,6 +56,10 @@ export const icons = {
 
 export type IconKey = keyof typeof icons;
 
+export function isIconKey(value: unknown): value is IconKey {
+  return typeof value === 'string' && Object.hasOwn(icons, value);
+}
+
 export function Icon({ name, ...props }: { name: IconKey } & LucideProps) {
   const Component = icons[name];
   return <Component aria-hidden {...props} />;

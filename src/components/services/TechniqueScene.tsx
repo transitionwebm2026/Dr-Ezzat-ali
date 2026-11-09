@@ -606,6 +606,12 @@ const scenes = {
 
 export type SceneKey = keyof typeof scenes;
 
+export const sceneKeys = Object.keys(scenes) as SceneKey[];
+
+export function isSceneKey(value: unknown): value is SceneKey {
+  return typeof value === 'string' && Object.hasOwn(scenes, value);
+}
+
 export function TechniqueScene({ scene, className }: { scene: SceneKey; className?: string }) {
   const scope = `scene${useId().replace(/[^\w-]/g, '')}`;
   const tools: Tools = { id: (name) => `${scope}-${name}`, url: (name) => `url(#${scope}-${name})` };

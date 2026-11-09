@@ -4,7 +4,7 @@
  * Each section maps to a path in the dictionaries (`src/i18n/dictionaries/*.ts`). The dictionary value
  * is both the default content and the schema: the admin form is generated from its shape, and saved
  * overrides are coerced back into that shape, so a malformed row can never break a page.
- * Lists managed by their own tables (reviews, videos, FAQs…) are listed in `omit`.
+ * Lists managed by their own tables (specialties, reviews, videos, FAQs…) are listed in `omit`.
  */
 
 export type SectionPage = 'global' | 'home' | 'about' | 'services' | 'reviews' | 'videos' | 'articles' | 'contact';
@@ -43,8 +43,9 @@ export const sectionRegistry: SectionDef[] = [
 
   { page: 'home', key: 'home.hero', label: 'الواجهة (Hero)' },
   { page: 'home', key: 'home.intro', label: 'التعريف والفيديو' },
-  { page: 'home', key: 'home.surgeries', label: 'عنوان قسم الجراحات', omit: ['items'] },
-  { page: 'home', key: 'home.treatments', label: 'عنوان قسم العلاجات', omit: ['items'] },
+  // Their cards are picked on the services page (specialties table → "الظهور في الصفحة الرئيسية").
+  { page: 'home', key: 'home.surgeries', label: 'عنوان قسم الجراحات' },
+  { page: 'home', key: 'home.treatments', label: 'عنوان قسم العلاجات' },
   { page: 'home', key: 'home.why', label: 'لماذا تختارنا' },
   { page: 'home', key: 'home.journey', label: 'رحلة المريض' },
   { page: 'home', key: 'home.reviews', label: 'عنوان قسم الآراء' },
@@ -62,7 +63,8 @@ export const sectionRegistry: SectionDef[] = [
   { page: 'about', key: 'cta.about', label: 'دعوة الحجز في آخر الصفحة' },
 
   { page: 'services', key: 'services.hero', label: 'الواجهة (Hero)' },
-  { page: 'services', key: 'services.specialties', label: 'التخصصات والتقنيات' },
+  // The specialties themselves live in the `specialties` table (dashboard: الخدمات → تخصصات صفحة الخدمات).
+  { page: 'services', key: 'services.specialties', label: 'عناوين وتسميات قسم التخصصات', omit: ['items'] },
   { page: 'services', key: 'services.process', label: 'خطوات تحديد العلاج' },
   { page: 'services', key: 'services.faq', label: 'عنوان دليل ما قبل وبعد العملية', omit: ['groups.*.items'], fixed: ['groups'] },
   { page: 'services', key: 'cta.services', label: 'دعوة الحجز في آخر الصفحة' },

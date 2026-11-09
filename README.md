@@ -38,14 +38,18 @@ Edge Function `publish-site` (is_admin check) ──Vercel deploy hook──▶ 
 - **Fallbacks:** anything left empty in the CMS falls back to `src/config/site.ts` / the dictionaries. Page-section
   overrides are coerced into the dictionary's shape, so a bad row can't break a page. Without Supabase env vars the
   site builds from the repository content as before.
-- **Home page:** reviews, videos and articles are never duplicated — the home sections show rows flagged
-  `is_featured_on_home` (first 3 videos / articles; all featured reviews).
+- **Home page:** nothing is duplicated — every home list comes from its own page. Service cards are the specialties /
+  techniques of the services page with `home_section` set; reviews, videos and articles are the rows flagged
+  `is_featured_on_home` (first 3 videos / articles; all featured reviews). The old `surgeries` / `treatments` tables
+  are no longer read.
 
 ### One-time setup
 
 1. **Database** — Supabase → SQL Editor: run the files in `supabase/migrations/` in name order
-   (`20261020000000_cms_schema.sql`, then `20261021000000_hero_image_intro_video.sql`), then
-   `supabase/seed.sql` (current site content; regenerate with `npm run cms:seed-sql`). All are re-runnable.
+   (`20261020000000_cms_schema.sql`, `20261021000000_hero_image_intro_video.sql`,
+   `20261109000000_specialties.sql`, then `20261110000000_specialties_home.sql`), then `supabase/seed.sql`
+   (current site content; regenerate with `npm run cms:seed-sql`). All are re-runnable. Until the specialties
+   migrations are run, the build keeps the repository defaults for those parts (`cms-pull` warns instead of failing).
 2. **Auth** — Authentication → Sign In / Providers: turn **off** "Allow new users to sign up".
    Create the admin: `$env:ADMIN_PASSWORD='…'; npm run cms:create-admin` (needs `SUPABASE_SERVICE_ROLE_KEY` in
    `.env.local`), or Authentication → Users → Add user (auto-confirm), then re-run the last statement of the migration.
@@ -71,7 +75,8 @@ Edge Function `publish-site` (is_admin check) ──Vercel deploy hook──▶ 
 | الفوتر                    | `footer_settings`, `site_settings`   |
 | صورة الواجهة والفيديو      | `site_settings` (hero image, intro video shared by home & about + thumbnail) |
 | نصوص أقسام الصفحات         | `page_sections` (registry: `src/lib/cms/sections.ts`) |
-| Content libraries         | `surgeries`, `treatments`, `reviews`, `videos`, `articles`, `faqs` |
+| الخدمات والتخصصات          | `specialties` (services page: quick-jump cards, deep-dive sections with conditions + technique cards; footer column; the home «surgeries» / «treatments» cards = specialties or techniques with `home_section` set) |
+| Content libraries         | `reviews`, `videos`, `articles`, `faqs` |
 | طلبات الحجز               | `consultations` (private, never published) |
 
 ## Deploy to Hostinger

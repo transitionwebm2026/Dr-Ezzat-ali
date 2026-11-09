@@ -49,14 +49,24 @@ const supabase = createClient(url, key, { auth: { persistSession: false, autoRef
 const list = (table, flag = 'is_published') =>
   supabase.from(table).select('*').eq(flag, true).order('sort_order').order('created_at').order('id');
 
+/**
+ * Tables added by a later migration. Until that migration is run the table is missing: the snapshot gets
+ * `null` and the site keeps the repository defaults for that part, instead of the whole pull failing.
+ */
+const optionalTables = { specialties: 'supabase/migrations/20261109000000_specialties.sql' };
+const warnedMissing = new Set();
+
+// PostgREST answers PGRST205 ("Could not find the table … in the schema cache") — 42P01 on older versions.
+const isMissingTable = (error) => error.code === 'PGRST205' || error.code === '42P01';
+
 async function pull() {
   const queries = {
     settings: supabase.from('site_settings').select('*').eq('id', 1).maybeSingle(),
     footer: supabase.from('footer_settings').select('*').eq('id', 1).maybeSingle(),
     navigation: list('navigation_menu', 'is_active'),
     sections: supabase.from('page_sections').select('*').order('section_key'),
-    surgeries: list('surgeries'),
-    treatments: list('treatments'),
+    // Also the source of the home-page surgeries / treatments cards (the old `surgeries` / `treatments` tables are unused).
+    specialties: list('specialties'),
     reviews: list('reviews'),
     videos: list('videos'),
     articles: list('articles'),
@@ -66,6 +76,11 @@ async function pull() {
   const entries = await Promise.all(
     Object.entries(queries).map(async ([name, query]) => {
       const { data, error } = await query;
+      if (error && optionalTables[name] && isMissingTable(error)) {
+        if (!warnedMissing.has(name)) console.warn(`• cms-pull: table "${name}" not found — run ${optionalTables[name]} in Supabase. Using the repository defaults for it.`);
+        warnedMissing.add(name);
+        return [name, null];
+      }
       if (error) throw new Error(`${name}: ${error.message}`);
       return [name, data];
     }),
@@ -106,7 +121,9 @@ if (process.argv.includes('--watch')) await watch();
 try {
   const data = await pull();
   await save({ source: 'supabase', fetchedAt: new Date().toISOString(), ...data });
-  const counts = ['surgeries', 'treatments', 'reviews', 'videos', 'articles', 'faqs'].map((name) => `${data[name].length} ${name}`).join(', ');
+  const counts = ['specialties', 'reviews', 'videos', 'articles', 'faqs']
+    .map((name) => `${data[name]?.length ?? 'no'} ${name}`)
+    .join(', ');
   console.log(`✓ cms-pull: ${counts}, ${data.sections.length} page sections`);
 } catch (error) {
   if (required) fail(error instanceof Error ? error.message : String(error));

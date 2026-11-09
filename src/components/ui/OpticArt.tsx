@@ -4,7 +4,7 @@ import { Icon, type IconKey } from '@/components/icons/registry';
 import type { Tone } from '@/content/media';
 import { cn } from '@/lib/cn';
 
-const toneClasses: Record<Tone, string> = {
+export const toneClasses: Record<Tone, string> = {
   cyan: 'from-primary-400 via-primary-600 to-secondary-700',
   navy: 'from-secondary-500 via-secondary-700 to-secondary-950',
   sky: 'from-primary-300 via-primary-500 to-secondary-600',

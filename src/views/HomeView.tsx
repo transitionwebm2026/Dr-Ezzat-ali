@@ -31,7 +31,8 @@ function SectionCta({ href, label }: { href: string; label: string }) {
 export function HomeView({ locale }: { locale: Locale }) {
   const t = getDictionary(locale);
   const home = t.home;
-  // Items flagged "featured on home" in the CMS — the home page never duplicates content.
+  // Every list on the home page comes from its own page: services cards picked on the services page,
+  // reviews / videos / articles flagged "featured on home" — the home page never duplicates content.
   const highlights = getHomeHighlights(locale);
   const dir = localeMeta[locale].dir;
 
@@ -54,14 +55,14 @@ export function HomeView({ locale }: { locale: Locale }) {
       {/* 3 · Counter stats */}
       <StatsBar items={t.stats.items} />
 
-      {/* 4 · Key surgeries */}
-      {home.surgeries.items.length > 0 && (
-        <ServicesShowcase locale={locale} content={home.surgeries} cardCta={t.common.learnMore} id="surgeries" />
+      {/* 4 · Key surgeries (picked on the services page) */}
+      {highlights.surgeries.length > 0 && (
+        <ServicesShowcase locale={locale} content={home.surgeries} cards={highlights.surgeries} cardCta={t.common.learnMore} id="surgeries" />
       )}
 
-      {/* 5 · Key treatments & medical services */}
-      {home.treatments.items.length > 0 && (
-        <ServicesShowcase locale={locale} content={home.treatments} cardCta={t.common.learnMore} tone="tint" id="treatments" />
+      {/* 5 · Key treatments & medical services (picked on the services page) */}
+      {highlights.treatments.length > 0 && (
+        <ServicesShowcase locale={locale} content={home.treatments} cards={highlights.treatments} cardCta={t.common.learnMore} tone="tint" id="treatments" />
       )}
 
       {/* 6 · Why choose us */}

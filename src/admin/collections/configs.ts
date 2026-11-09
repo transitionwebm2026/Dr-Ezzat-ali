@@ -10,15 +10,41 @@ export type FieldDef =
   | { type: 'rating'; name: string; label: string }
   | { type: 'date'; name: string; label: string }
   | { type: 'toggle'; name: string; label: string; hint?: string }
-  | { type: 'select'; name: string; label: string; options: { value: string; label: string }[] }
+  | { type: 'select'; name: string; label: string; options: { value: string; label: string }[]; hint?: string }
   | { type: 'image'; name: string; label: string; hint?: string }
   /** Uploaded video + its compulsory thumbnail (+ optional YouTube alternative). */
-  | { type: 'video'; name: string; thumbnail: string; youtube?: string; label: string };
+  | { type: 'video'; name: string; thumbnail: string; youtube?: string; label: string }
+  /** Title that splits a long form into sections (writes no column). */
+  | { type: 'heading'; name: string; label: string; hint?: string }
+  /** Card look: icon + colour + optional photo, with a live preview. */
+  | { type: 'visual'; name: string; label: string; icon: string; tone: string; image: string; imageHint?: string }
+  /** Animated illustration of a technique (`SceneKey`), with a live preview. */
+  | { type: 'scene'; name: string; label: string; hint?: string }
+  /** jsonb array of objects; each item is edited with `fields` (one level — no repeater inside a repeater). */
+  | {
+      type: 'repeater';
+      name: string;
+      label: string;
+      /** Singular, for "إضافة …" and the item headers. */
+      itemLabel: string;
+      hint?: string;
+      fields: FieldDef[];
+      defaults: Row;
+      /** Column that must be unique among the items. */
+      keyField?: string;
+      /** Column shown in the collapsed item header. */
+      titleField?: string;
+      /** Optional status shown next to the title in the collapsed item header. */
+      badge?: (item: Row) => string | null;
+    };
 
 export type Flag = { name: string; label: string; offLabel?: string; tone: 'green' | 'blue' | 'amber' };
 
+/** Shortcut to a related dashboard page, shown under the page title. */
+export type RelatedLink = { href: string; label: string };
+
 export type CollectionConfig = {
-  table: 'surgeries' | 'treatments' | 'reviews' | 'videos' | 'articles' | 'faqs';
+  table: 'specialties' | 'reviews' | 'videos' | 'articles' | 'faqs';
   title: string;
   description: string;
   singular: string;
@@ -31,6 +57,7 @@ export type CollectionConfig = {
   flags: Flag[];
   groupBy?: { name: string; options: { value: string; label: string }[] };
   validate?: (row: Row) => Record<string, string>;
+  related?: RelatedLink[];
 };
 
 const text = (value: unknown) => (typeof value === 'string' ? value : '');
@@ -41,47 +68,148 @@ const featured: Flag = { name: 'is_featured_on_home', label: 'في الرئيس�
 const publishedToggle: FieldDef = { type: 'toggle', name: 'is_published', label: 'منشور على الموقع', hint: 'أوقفه لحفظ العنصر كمسودة دون أن يظهر للزوار.' };
 const featuredToggle = (hint: string): FieldDef => ({ type: 'toggle', name: 'is_featured_on_home', label: 'عرض في الصفحة الرئيسية', hint });
 
-const serviceFields: FieldDef[] = [
-  { type: 'bilingual', name: 'title', label: 'العنوان', required: true },
-  { type: 'bilingual', name: 'description', label: 'الوصف المختصر', multiline: true, rows: 3, required: true },
+const count = (value: unknown) => (Array.isArray(value) ? value.length : 0);
+
+/** Pages that edit the rest of the services content, so every part is one click away. */
+const servicesLinks = {
+  specialties: { href: '/admin/specialties/', label: 'الخدمات والتخصصات' },
+  texts: { href: '/admin/sections/?page=services', label: 'نصوص صفحة الخدمات (الواجهة، العناوين، خطوات العلاج)' },
+  homeTexts: { href: '/admin/sections/?page=home', label: 'عناوين أقسام الصفحة الرئيسية' },
+  faqs: { href: '/admin/faqs/?group=services_before', label: 'دليل ما قبل العملية وبعدها' },
+} satisfies Record<string, RelatedLink>;
+
+/** Home-page sections whose cards are picked from the services page (see `homeCards` in src/lib/cms/content.ts). */
+const homeSectionOptions = [
+  { value: '', label: 'لا يظهر في الصفحة الرئيسية' },
+  { value: 'surgeries', label: 'قسم «أبرز الجراحات» في الرئيسية' },
+  { value: 'treatments', label: 'قسم «علاجات متقدمة دون جراحة» في الرئيسية' },
+];
+
+const homeLabels: Record<string, string> = { surgeries: 'الجراحات', treatments: 'العلاجات' };
+
+const homeTag = (placeholder: string): FieldDef => ({
+  type: 'text',
+  name: 'tag',
+  label: 'وسم قصير على بطاقة الرئيسية (اختياري)',
+  ltr: true,
+  placeholder,
+});
+
+const techniqueFields: FieldDef[] = [
+  { type: 'bilingual', name: 'name', label: 'اسم التقنية', required: true },
+  { type: 'bilingual', name: 'detail', label: 'شرح مختصر', multiline: true, rows: 2 },
   {
     type: 'text',
     name: 'key',
     label: 'المعرّف (بالإنجليزية)',
     ltr: true,
     required: true,
-    slugFrom: 'title_en',
-    hint: 'يحدد أيقونة البطاقة ورابطها في صفحة الخدمات، مثل: lasik · cataract · retina · glaucoma · anti-vegf',
+    slugFrom: 'name_en',
+    hint: 'يُولَّد تلقائياً من الاسم الإنجليزي، مثل: femto-lasik — لا يتكرر داخل نفس التخصص.',
   },
-  { type: 'text', name: 'tag', label: 'وسم قصير على الصورة', ltr: true, placeholder: 'Femto-LASIK · SMILE' },
-  { type: 'image', name: 'image_url', label: 'صورة البطاقة (اختيارية)', hint: 'بدونها تظهر رسمة العيادة المميزة. نسبة 16:10.' },
-  publishedToggle,
+  { type: 'scene', name: 'scene', label: 'الرسمة المتحركة', hint: 'تظهر في لوحة العرض عند اختيار الزائر لهذه التقنية.' },
+  { type: 'image', name: 'image_url', label: 'صورة حقيقية بدل الرسمة (اختيارية)', hint: 'إن رفعتها تحل محل الرسمة المتحركة. يُفضّل صورة رأسية بنسبة 4:5.' },
+  {
+    type: 'select',
+    name: 'home_section',
+    label: 'الظهور في الصفحة الرئيسية',
+    options: homeSectionOptions,
+    hint: 'تظهر التقنية كبطاقة بالاسم والشرح والرسمة، وتفتح قسم التخصص عند الضغط عليها.',
+  },
+  homeTag('Anti-VEGF'),
 ];
 
-const serviceDefaults: Row = { key: '', tag: '', title_ar: '', title_en: '', description_ar: '', description_en: '', image_url: null, is_published: true };
-
 export const collections: Record<CollectionConfig['table'], CollectionConfig> = {
-  surgeries: {
-    table: 'surgeries',
-    title: 'الجراحات',
-    description: 'بطاقات قسم «أبرز الجراحات» في الصفحة الرئيسية.',
-    singular: 'جراحة',
-    folder: 'surgeries',
-    fields: serviceFields,
-    defaults: serviceDefaults,
-    summary: (row) => ({ title: text(row.title_ar), subtitle: text(row.description_ar), image: row.image_url as string | null }),
+  specialties: {
+    table: 'specialties',
+    title: 'الخدمات والتخصصات',
+    description:
+      'كل تخصص يظهر في صفحة «الخدمات» كبطاقة في أعلى الصفحة وقسم تفاصيل كامل (الحالات، التقنيات، مدة الإجراء والتعافي)، ويظهر رابطه في عمود «التخصصات» بالفوتر. ومن هنا أيضاً تختار ما يظهر في قسمي «الجراحات» و«العلاجات» بالصفحة الرئيسية — تخصص كامل أو تقنية من داخله. رتّبها بالأسهم.',
+    singular: 'تخصص',
+    folder: 'specialties',
+    fields: [
+      { type: 'heading', name: '_basics', label: 'البيانات الأساسية' },
+      { type: 'bilingual', name: 'title', label: 'اسم التخصص', required: true },
+      { type: 'bilingual', name: 'short', label: 'سطر تعريفي قصير', hint: 'يظهر تحت الاسم في بطاقة التخصص أعلى الصفحة.' },
+      { type: 'bilingual', name: 'description', label: 'الوصف', multiline: true, rows: 4, hint: 'الفقرة التي تظهر تحت اسم التخصص في قسم التفاصيل.' },
+      {
+        type: 'text',
+        name: 'key',
+        label: 'المعرّف (بالإنجليزية)',
+        ltr: true,
+        required: true,
+        slugFrom: 'title_en',
+        hint: 'رابط القسم في صفحة الخدمات: /services/#المعرّف (مثل lasik).',
+      },
+
+      { type: 'heading', name: '_conditions', label: 'الحالات التي نعالجها', hint: 'تظهر كشارات في قسم التخصص — اتركها فارغة لإخفاء الجزء.' },
+      { type: 'bilingual-list', name: 'conditions', label: 'الحالات' },
+
+      {
+        type: 'heading',
+        name: '_techniques',
+        label: 'التقنيات المستخدمة',
+        hint: 'كل تقنية بطاقة يضغط عليها الزائر فتظهر رسمتها المتحركة (أو صورتها) في لوحة العرض. الترتيب هنا هو ترتيب الظهور. ويمكن عرض أي تقنية في الصفحة الرئيسية من داخلها.',
+      },
+      {
+        type: 'repeater',
+        name: 'techniques',
+        label: 'التقنيات',
+        itemLabel: 'تقنية',
+        keyField: 'key',
+        titleField: 'name_ar',
+        badge: (item) => (homeLabels[text(item.home_section)] ? `في الرئيسية: ${homeLabels[text(item.home_section)]}` : null),
+        fields: techniqueFields,
+        defaults: { key: '', name_ar: '', name_en: '', detail_ar: '', detail_en: '', scene: 'femto', image_url: null, home_section: null, tag: null },
+      },
+
+      { type: 'heading', name: '_facts', label: 'مدة الإجراء والتعافي', hint: 'تظهر أسفل لوحة العرض. اترك الحقل فارغاً لإخفائه.' },
+      { type: 'bilingual', name: 'duration', label: 'مدة الإجراء' },
+      { type: 'bilingual', name: 'recovery', label: 'التعافي' },
+
+      { type: 'heading', name: '_look', label: 'شكل البطاقة' },
+      {
+        type: 'visual',
+        name: 'visual',
+        label: 'الأيقونة واللون والصورة',
+        icon: 'icon',
+        tone: 'tone',
+        image: 'image_url',
+        imageHint: 'اختيارية — بدونها تظهر الرسمة المميزة بالأيقونة واللون المختارين. نسبة 4:3.',
+      },
+
+      {
+        type: 'heading',
+        name: '_home',
+        label: 'الظهور في الصفحة الرئيسية',
+        hint: 'بطاقة التخصص في الرئيسية تأخذ اسمه وأيقونته ولونه وصورته من هنا، وتفتح قسمه في صفحة الخدمات عند الضغط عليها.',
+      },
+      { type: 'select', name: 'home_section', label: 'يظهر التخصص في', options: homeSectionOptions },
+      { type: 'bilingual', name: 'summary', label: 'وصف البطاقة في الرئيسية', multiline: true, rows: 2, hint: 'جملة أو جملتان. إن تُرك فارغاً يُستخدم «الوصف».' },
+      homeTag('Femto-LASIK · SMILE'),
+      publishedToggle,
+    ],
+    defaults: {
+      key: '', title_ar: '', title_en: '', short_ar: '', short_en: '', description_ar: '', description_en: '',
+      conditions_ar: [], conditions_en: [], techniques: [], duration_ar: '', duration_en: '', recovery_ar: '', recovery_en: '',
+      icon: 'eye', tone: 'cyan', image_url: null, home_section: null, summary_ar: '', summary_en: '', tag: null, is_published: true,
+    },
+    summary: (row) => {
+      const onHome = [
+        homeLabels[text(row.home_section)] ? `التخصص في ${homeLabels[text(row.home_section)]}` : '',
+        ...(Array.isArray(row.techniques) ? row.techniques : []).filter((item) => homeLabels[text(item?.home_section)]).map((item) => `«${text(item.name_ar)}» في ${homeLabels[text(item.home_section)]}`),
+      ].filter(Boolean);
+      return {
+        title: text(row.title_ar),
+        subtitle: [
+          `#${text(row.key)} · ${count(row.techniques)} تقنيات · ${count(row.conditions_ar)} حالات`,
+          onHome.length ? `في الرئيسية: ${onHome.join('، ')}` : 'لا يظهر في الرئيسية',
+        ].join(' — '),
+        image: row.image_url as string | null,
+      };
+    },
     flags: [published],
-  },
-  treatments: {
-    table: 'treatments',
-    title: 'العلاجات',
-    description: 'بطاقات قسم «علاجات متقدمة دون جراحة» في الصفحة الرئيسية.',
-    singular: 'علاج',
-    folder: 'treatments',
-    fields: serviceFields,
-    defaults: serviceDefaults,
-    summary: (row) => ({ title: text(row.title_ar), subtitle: text(row.description_ar), image: row.image_url as string | null }),
-    flags: [published],
+    related: [servicesLinks.texts, servicesLinks.homeTexts, servicesLinks.faqs],
   },
   reviews: {
     table: 'reviews',
@@ -177,6 +305,7 @@ export const collections: Record<CollectionConfig['table'], CollectionConfig> = 
     defaults: { page_location: 'home', question_ar: '', question_en: '', answer_ar: '', answer_en: '', is_published: true },
     summary: (row) => ({ title: text(row.question_ar), subtitle: text(row.answer_ar) }),
     flags: [published],
+    related: [servicesLinks.specialties, servicesLinks.texts],
     groupBy: {
       name: 'page_location',
       options: [

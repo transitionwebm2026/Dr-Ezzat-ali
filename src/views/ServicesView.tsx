@@ -12,6 +12,7 @@ import { SpecialtyQuickJump } from '@/components/services/SpecialtyQuickJump';
 import { Container, Section } from '@/components/ui/Container';
 import { SectionHeading } from '@/components/ui/SectionHeading';
 import { getDictionary, localePath, pagePaths, type Locale } from '@/i18n';
+import type { Specialty } from '@/lib/cms/content';
 
 const groupIcons = { before: CalendarClock, after: HeartHandshake } as const;
 
@@ -19,6 +20,8 @@ export function ServicesView({ locale }: { locale: Locale }) {
   const t = getDictionary(locale);
   const services = t.services;
   const specialties = services.specialties;
+  // Managed in the dashboard (الخدمات → تخصصات صفحة الخدمات), with the dashboard's icon / colour / photo choices.
+  const items = specialties.items as Specialty[];
 
   return (
     <>
@@ -33,33 +36,37 @@ export function ServicesView({ locale }: { locale: Locale }) {
         portraitAlt={t.doctor.portraitAlt}
       />
 
-      {/* 2a · Quick-jump specialty cards */}
-      <Section className="!pb-12 sm:!pb-16">
-        <Container>
-          <SectionHeading title={specialties.title} subtitle={specialties.subtitle} />
-          <SpecialtyQuickJump items={specialties.items} hint={specialties.jumpHint} />
-        </Container>
-      </Section>
+      {items.length > 0 && (
+        <>
+          {/* 2a · Quick-jump specialty cards */}
+          <Section className="!pb-12 sm:!pb-16">
+            <Container>
+              <SectionHeading title={specialties.title} subtitle={specialties.subtitle} />
+              <SpecialtyQuickJump items={items} hint={specialties.jumpHint} />
+            </Container>
+          </Section>
 
-      {/* 2b · Deep-dive cards with sticky scroll-spy navigation */}
-      <section className="relative pb-24 lg:pb-32">
-        <Container>
-          <SpecialtyNav items={specialties.items.map(({ id, title }) => ({ id, title }))} label={specialties.navLabel} />
-          <div className="mt-14 space-y-24 lg:mt-20 lg:space-y-32">
-            {specialties.items.map((item, index) => (
-              <SpecialtyDetail
-                key={item.id}
-                item={item}
-                index={index}
-                labels={specialties}
-                bookLabel={t.common.bookAppointment}
-                contactHref={localePath(locale, pagePaths.contact)}
-                serviceMessage={t.whatsapp.serviceMessage}
-              />
-            ))}
-          </div>
-        </Container>
-      </section>
+          {/* 2b · Deep-dive cards with sticky scroll-spy navigation */}
+          <section className="relative pb-24 lg:pb-32">
+            <Container>
+              <SpecialtyNav items={items.map(({ id, title }) => ({ id, title }))} label={specialties.navLabel} />
+              <div className="mt-14 space-y-24 lg:mt-20 lg:space-y-32">
+                {items.map((item, index) => (
+                  <SpecialtyDetail
+                    key={item.id}
+                    item={item}
+                    index={index}
+                    labels={specialties}
+                    bookLabel={t.common.bookAppointment}
+                    contactHref={localePath(locale, pagePaths.contact)}
+                    serviceMessage={t.whatsapp.serviceMessage}
+                  />
+                ))}
+              </div>
+            </Container>
+          </section>
+        </>
+      )}
 
       {/* 3 · Treatment determination process */}
       <Section tone="tint">

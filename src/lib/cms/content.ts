@@ -3,12 +3,15 @@
  * the per-locale dictionary, the home-page highlights, the navbar and the footer links.
  * Without a snapshot (`cms === null`) every function returns the repository defaults.
  */
+import { isIconKey, type IconKey } from '@/components/icons/registry';
+import { isSceneKey, type SceneKey } from '@/components/services/TechniqueScene';
+import { getServiceVisual, getTechniqueVisual, homeDefaults, isHomeSection, isTone, type HomeSection, type Tone } from '@/content/media';
 import type { Locale } from '@/i18n/config';
 import type { Dictionary } from '@/i18n/dictionaries/ar';
 import { normalizePath } from './paths';
 import { cms } from './snapshot';
 import { getAtPath, getSectionDef, resolveSection, setAtPath } from './sections';
-import type { CmsData, FaqLocation, NavigationRow, SocialNetwork } from './types';
+import type { CmsData, FaqLocation, NavigationRow, SocialNetwork, SpecialtyRow } from './types';
 
 type Row = Record<string, unknown>;
 
@@ -36,18 +39,137 @@ function paragraphs(text: string): string[] {
     .filter(Boolean);
 }
 
+type DictSpecialty = Dictionary['services']['specialties']['items'][number];
+
+/** Where a specialty / technique also appears on the home page (`home`) and the short tag on that card. */
+type HomePlacement = { home?: HomeSection; tag?: string };
+
+/** A technique card; `scene` / `image` are dashboard choices (missing → defaults keyed by `id`). */
+export type SpecialtyTechnique = DictSpecialty['techniques'][number] & HomePlacement & { scene?: SceneKey; image?: string };
+
+/** A services-page specialty; `icon` / `tone` / `image` are dashboard choices (missing → defaults keyed by `id`). */
+export type Specialty = Omit<DictSpecialty, 'techniques'> &
+  HomePlacement & { techniques: SpecialtyTechnique[]; icon?: IconKey; tone?: Tone; image?: string };
+
+function placement(row: { home_section?: string | null; tag?: string | null }): HomePlacement {
+  return { home: isHomeSection(row.home_section) ? row.home_section : undefined, tag: row.tag?.trim() || undefined };
+}
+
+function toSpecialty(row: SpecialtyRow, locale: Locale): Specialty {
+  const techniques = (Array.isArray(row.techniques) ? row.techniques : [])
+    .map((entry) => ({
+      id: entry.key,
+      name: localized(entry, 'name', locale),
+      detail: localized(entry, 'detail', locale),
+      scene: isSceneKey(entry.scene) ? entry.scene : undefined,
+      image: entry.image_url || undefined,
+      ...placement(entry),
+    }))
+    .filter((technique) => technique.id && technique.name);
+  return {
+    id: row.key,
+    title: localized(row, 'title', locale),
+    short: localized(row, 'short', locale),
+    summary: localized(row, 'summary', locale),
+    description: localized(row, 'description', locale),
+    conditions: localizedList(row, 'conditions', locale),
+    techniques,
+    duration: localized(row, 'duration', locale),
+    recovery: localized(row, 'recovery', locale),
+    icon: isIconKey(row.icon) ? row.icon : undefined,
+    tone: isTone(row.tone) ? row.tone : undefined,
+    image: row.image_url || undefined,
+    ...placement(row),
+  };
+}
+
+/**
+ * Home placement + tags from the repository defaults (`homeDefaults`): used without the CMS, and for rows saved
+ * before the home columns existed. `base` = the dictionary specialty with the same id (its default card text).
+ */
+function withHomeDefaults(item: Specialty, base?: DictSpecialty): Specialty {
+  const defaults = (id: string): HomePlacement => ({ home: homeDefaults[id]?.section, tag: homeDefaults[id]?.tag });
+  return {
+    ...item,
+    summary: item.summary || base?.summary || '',
+    ...defaults(item.id),
+    techniques: item.techniques.map((technique) => ({ ...technique, ...defaults(technique.id) })),
+  };
+}
+
+/** A home-page service card: a specialty, or one technique of a specialty, chosen for that section. */
+export type HomeCard = {
+  key: string;
+  title: string;
+  description: string;
+  tag?: string;
+  image?: string;
+  icon: IconKey;
+  tone: Tone;
+  /** Technique cards show the technique's animated illustration (when it has no photo). */
+  scene?: SceneKey;
+  /** Section on the services page the card opens: /services/#anchor */
+  anchor: string;
+};
+
+/** Cards of one home section, in services-page order (each specialty, then its chosen techniques). */
+function homeCards(specialties: Specialty[], section: HomeSection): HomeCard[] {
+  return specialties.flatMap((specialty) => {
+    const visual = getServiceVisual(specialty.id, { icon: specialty.icon, tone: specialty.tone, image: specialty.image });
+    const cards: HomeCard[] = [];
+    if (specialty.home === section) {
+      cards.push({
+        key: specialty.id,
+        title: specialty.title,
+        description: specialty.summary || specialty.description,
+        tag: specialty.tag,
+        image: visual.image,
+        icon: visual.icon,
+        tone: visual.tone,
+        anchor: specialty.id,
+      });
+    }
+    for (const technique of specialty.techniques) {
+      if (technique.home !== section) continue;
+      const media = getTechniqueVisual(technique.id, { scene: technique.scene, image: technique.image });
+      cards.push({
+        key: `${specialty.id}-${technique.id}`,
+        title: technique.name,
+        description: technique.detail,
+        tag: technique.tag,
+        image: media.image,
+        icon: visual.icon,
+        tone: visual.tone,
+        scene: media.scene,
+        anchor: specialty.id,
+      });
+    }
+    return cards;
+  });
+}
+
 type Review = Dictionary['reviews']['items'][number];
 type Video = Dictionary['videos']['items'][number] & { youtubeId?: string; src?: string; poster?: string };
 type Article = Dictionary['articles']['items'][number] & { image?: string };
 
-export type HomeHighlights = { reviews: Review[]; videos: Video[]; articles: Article[] };
+export type HomeHighlights = {
+  /** Picked on the services page ("الظهور في الصفحة الرئيسية" of each specialty / technique). */
+  surgeries: HomeCard[];
+  treatments: HomeCard[];
+  reviews: Review[];
+  videos: Video[];
+  articles: Article[];
+};
 
 export type SiteContent = { dictionary: Dictionary; home: HomeHighlights };
 
 const HOME_GRID_SIZE = 3;
 
 function defaultHome(t: Dictionary): HomeHighlights {
+  const specialties = t.services.specialties.items.map((item) => withHomeDefaults(item, item));
   return {
+    surgeries: homeCards(specialties, 'surgeries'),
+    treatments: homeCards(specialties, 'treatments'),
     reviews: t.reviews.items,
     videos: t.videos.items.slice(0, HOME_GRID_SIZE),
     articles: t.articles.items.slice(0, HOME_GRID_SIZE),
@@ -69,22 +191,18 @@ export function buildSiteContent(locale: Locale, base: Dictionary): SiteContent 
   applySections(t, data, locale);
   applySettings(t, data, locale);
 
-  const surgeries = data.surgeries.map((row) => ({
-    id: row.key,
-    tag: row.tag ?? '',
-    title: localized(row, 'title', locale),
-    description: localized(row, 'description', locale),
-    image: row.image_url ?? undefined,
-  }));
-  const treatments = data.treatments.map((row) => ({
-    id: row.key,
-    tag: row.tag ?? '',
-    title: localized(row, 'title', locale),
-    description: localized(row, 'description', locale),
-    image: row.image_url ?? undefined,
-  }));
-  t.home.surgeries.items = surgeries;
-  t.home.treatments.items = treatments;
+  // Services page specialties — also the footer "Specialties" column and the home surgeries / treatments cards.
+  // Until the table exists, the repository defaults stay; until the home columns exist, the default home picks.
+  const baseItems = base.services.specialties.items;
+  const rows = Array.isArray(data.specialties) ? data.specialties : null;
+  const hasHomeColumns = rows?.some((row) => 'home_section' in row) ?? false;
+  const specialties: Specialty[] = rows
+    ? rows.map((row) => {
+        const item = toSpecialty(row, locale);
+        return hasHomeColumns ? item : withHomeDefaults(item, baseItems.find((entry) => entry.id === item.id));
+      })
+    : baseItems.map((item) => withHomeDefaults(item, item));
+  t.services.specialties.items = specialties;
 
   const reviews: Review[] = data.reviews.map((row) => ({
     name: localized(row, 'patient_name', locale),
@@ -128,6 +246,8 @@ export function buildSiteContent(locale: Locale, base: Dictionary): SiteContent 
   return {
     dictionary: t,
     home: {
+      surgeries: homeCards(specialties, 'surgeries'),
+      treatments: homeCards(specialties, 'treatments'),
       reviews: featured(reviews, data.reviews.map((row) => row.is_featured_on_home)),
       videos: featured(videos, data.videos.map((row) => row.is_featured_on_home), HOME_GRID_SIZE),
       articles: featured(articles, articleRows.map((row) => row.is_featured_on_home), HOME_GRID_SIZE),

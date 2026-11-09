@@ -2,17 +2,21 @@ import { ArrowDown } from 'lucide-react';
 import { Stagger, StaggerItem } from '@/components/motion/Reveal';
 import { OpticArt } from '@/components/ui/OpticArt';
 import { getServiceVisual } from '@/content/media';
+import type { Specialty } from '@/lib/cms/content';
 
-type QuickJumpItem = { id: string; title: string; short: string };
+type QuickJumpItem = Pick<Specialty, 'id' | 'title' | 'short' | 'icon' | 'tone' | 'image'>;
 
-/** Four entry cards that jump to each specialty's deep-dive section. */
+/**
+ * Entry cards that jump to each specialty's deep-dive section. Up to four per row; an incomplete
+ * last row is centred (the number of specialties is set in the dashboard).
+ */
 export function SpecialtyQuickJump({ items, hint }: { items: QuickJumpItem[]; hint: string }) {
   return (
-    <Stagger className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+    <Stagger className="flex flex-wrap justify-center gap-5">
       {items.map((item, index) => {
-        const visual = getServiceVisual(item.id);
+        const visual = getServiceVisual(item.id, { icon: item.icon, tone: item.tone, image: item.image });
         return (
-          <StaggerItem key={item.id} className="h-full">
+          <StaggerItem key={item.id} className="w-full sm:w-[calc((100%-1.25rem)/2)] lg:w-[calc((100%-3.75rem)/4)]">
             <a href={`#${item.id}`} className="card card-hover group flex h-full flex-col overflow-hidden p-2">
               <OpticArt tone={visual.tone} icon={visual.icon} image={visual.image} imageAlt={item.title} className="aspect-[4/3] rounded-[1.25rem]">
                 <span aria-hidden className="absolute bottom-3 end-4 font-heading text-5xl font-bold text-white/20">
